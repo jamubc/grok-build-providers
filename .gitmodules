@@ -1,0 +1,9 @@
+[submodule "agy"]
+	path = agy
+	url = https://github.com/jamubc/agy-for-grok-build
+[submodule "codex"]
+	path = codex
+	url = https://github.com/jamubc/codex-for-grok-build
+[submodule "deepseek"]
+	path = deepseek
+	url = https://github.com/jamubc/deepseek-for-grok-build
