@@ -7,3 +7,6 @@
 [submodule "deepseek"]
 	path = deepseek
 	url = https://github.com/jamubc/deepseek-for-grok-build
+[submodule "qwen"]
+	path = qwen
+	url = https://github.com/jamubc/qwen-for-grok-build.git

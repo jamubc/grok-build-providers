@@ -11,6 +11,49 @@ const HOME = os.homedir();
 const GROK_CONFIG = path.join(HOME, '.grok', 'config.toml');
 const CLIPROXY_AUTH_DIR = path.join(HOME, '.cli-proxy-api');
 
+// Headless argument mode check
+const arg = process.argv[2];
+if (arg) {
+  if (['agy', 'codex', 'deepseek', 'qwen'].includes(arg)) {
+    console.log(`Running headless installer for ${arg}...`);
+    const targetDir = path.join(__dirname, arg);
+    if (!fs.existsSync(targetDir)) {
+      console.error(`Error: Directory ${targetDir} does not exist.`);
+      process.exit(1);
+    }
+    const res = spawnSync('node', ['lib/install.js'], {
+      cwd: targetDir,
+      stdio: 'inherit'
+    });
+    process.exit(res.status ?? 0);
+  } else if (arg === 'all') {
+    console.log('Running headless installer for all connecters...');
+    let success = true;
+    for (const tool of ['agy', 'codex', 'deepseek', 'qwen']) {
+      console.log(`\n--- Installing ${tool.toUpperCase()} ---`);
+      const targetDir = path.join(__dirname, tool);
+      if (!fs.existsSync(targetDir)) {
+        console.error(`Error: Directory ${targetDir} does not exist.`);
+        success = false;
+        continue;
+      }
+      const res = spawnSync('node', ['lib/install.js'], {
+        cwd: targetDir,
+        stdio: 'inherit'
+      });
+      if (res.status !== 0) success = false;
+    }
+    process.exit(success ? 0 : 1);
+  } else if (arg === '--help' || arg === '-h') {
+    console.log(`Usage: open-grok-build [agy|codex|deepseek|qwen|all]`);
+    process.exit(0);
+  } else {
+    console.error(`Unknown argument: ${arg}`);
+    console.log(`Usage: open-grok-build [agy|codex|deepseek|qwen|all]`);
+    process.exit(1);
+  }
+}
+
 // Color codes
 const C_CYAN = '\x1b[36m';
 const C_GREEN = '\x1b[32m';
@@ -42,16 +85,17 @@ const MAIN_MENU_ITEMS = [
   '❌ Exit'
 ];
 
-let activeModels = ['agy', 'codex', 'deepseek'];
+let activeModels = ['agy', 'codex', 'deepseek', 'qwen'];
 let activeModelIndex = 0;
 
 let configModelIndex = 0;
-const CONFIG_MODELS = ['agy', 'codex', 'deepseek'];
+const CONFIG_MODELS = ['agy', 'codex', 'deepseek', 'qwen'];
 
 // Model options state
 let agyModels = ['gemini-3.5-flash', 'gemini-3-pro', 'gemini-3-pro-thinking', 'gemini-2.5-pro', 'gemini-2.5-flash'];
 let codexModels = ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-5.3-codex', 'gpt-5.2'];
 let deepseekModels = ['deepseek-v4-flash', 'deepseek-v4-pro'];
+let qwenModels = ['qwen2.5-coder-32b-instruct', 'qwen2.5-coder-7b-instruct', 'qwen2.5-coder-1.5b-instruct'];
 
 // ---------------------------------------------------------------------------
 // Config Helpers
@@ -172,7 +216,7 @@ function render() {
     
     console.log(`  Current Active Default in Grok: ${C_BOLD}${C_CYAN}${activeGrok}${C_RESET}\n`);
     
-    ['agy', 'codex', 'deepseek'].forEach((tool) => {
+    ['agy', 'codex', 'deepseek', 'qwen'].forEach((tool) => {
       const status = checkInstallationStatus(tool);
       const activeModel = getSubmoduleModel(tool);
       console.log(`  • ${C_BOLD}${tool.toUpperCase()}${C_RESET}:`);
@@ -256,10 +300,25 @@ function render() {
     console.log(`\n${C_YELLOW}Select with Enter. Press Esc to cancel.${C_RESET}`);
   } 
   
+  else if (currentView === 'config-options-qwen') {
+    console.log(`${C_BOLD}Select Default Model for Qwen Connector:${C_RESET}\n`);
+    
+    const current = getSubmoduleModel('qwen');
+    qwenModels.forEach((model, index) => {
+      const isCurrent = model === current ? ` ${C_GREEN}(Current)${C_RESET}` : '';
+      if (index === optionIndex) {
+        console.log(` > ${C_CYAN}${C_BOLD}${C_REVERSE} ${model} ${C_RESET}${isCurrent}`);
+      } else {
+        console.log(`   ${model}${isCurrent}`);
+      }
+    });
+    console.log(`\n${C_YELLOW}Select with Enter. Press Esc to cancel.${C_RESET}`);
+  } 
+  
   else if (currentView === 'install') {
     console.log(`${C_BOLD}Install/Re-install Submodule Connectors:${C_RESET}\n`);
     
-    const options = ['AGY (Antigravity)', 'Codex', 'DeepSeek', 'Install All Connectors'];
+    const options = ['AGY (Antigravity)', 'Codex', 'DeepSeek', 'Qwen (Alibaba)', 'Install All Connectors'];
     options.forEach((opt, index) => {
       if (index === optionIndex) {
         console.log(` > ${C_CYAN}${C_BOLD}${C_REVERSE} ${opt} ${C_RESET}`);
@@ -312,7 +371,7 @@ function runInstallAll() {
   installLogs = `${C_YELLOW}Installing all submodules...${C_RESET}\n\n`;
   render();
   
-  ['agy', 'codex', 'deepseek'].forEach((tool) => {
+  ['agy', 'codex', 'deepseek', 'qwen'].forEach((tool) => {
     installLogs += `[${tool.toUpperCase()}]\n`;
     const targetDir = path.join(__dirname, tool);
     if (!fs.existsSync(targetDir)) {
@@ -470,13 +529,29 @@ process.stdin.on('keypress', (str, key) => {
     }
   } 
   
+  // --- Configure Qwen options ---
+  else if (currentView === 'config-options-qwen') {
+    if (key.name === 'up') {
+      optionIndex = (optionIndex - 1 + qwenModels.length) % qwenModels.length;
+      render();
+    } else if (key.name === 'down') {
+      optionIndex = (optionIndex + 1) % qwenModels.length;
+      render();
+    } else if (key.name === 'return') {
+      const selected = qwenModels[optionIndex];
+      updateSubmoduleModel('qwen', selected);
+      currentView = 'main';
+      render();
+    }
+  } 
+  
   // --- Install execution ---
   else if (currentView === 'install') {
     if (key.name === 'up') {
-      optionIndex = (optionIndex - 1 + 4) % 4;
+      optionIndex = (optionIndex - 1 + 5) % 5;
       render();
     } else if (key.name === 'down') {
-      optionIndex = (optionIndex + 1) % 4;
+      optionIndex = (optionIndex + 1) % 5;
       render();
     } else if (key.name === 'return') {
       if (optionIndex === 0) {
@@ -486,6 +561,8 @@ process.stdin.on('keypress', (str, key) => {
       } else if (optionIndex === 2) {
         runInstaller('deepseek');
       } else if (optionIndex === 3) {
+        runInstaller('qwen');
+      } else if (optionIndex === 4) {
         runInstallAll();
       }
     }
