@@ -86,6 +86,9 @@ function installCustom(name, entry) {
   if (!entry) {
     throw new Error(`Installer error: manifest entry for "${name}" is missing.`);
   }
+  if (!entry.envKey || !entry.port || !entry.defaultModel) {
+    throw new Error(`Installer error: manifest entry for "${name}" is missing required fields (envKey, port, defaultModel).`);
+  }
   const envFile = path.join(CLIPROXY_AUTH_DIR, `grok-${name}.env`);
 
   // 1. Directories

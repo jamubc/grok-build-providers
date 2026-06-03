@@ -10,8 +10,8 @@ const { startProxy } = require('../../_shared/proxy');
 const NAME = 'codex';
 const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'providers.json'), 'utf8'));
 const entry = manifest[NAME];
-if (!entry || !entry.models) {
-  process.stderr.write(`Error: provider "${NAME}" or its models are not configured in providers.json\n`);
+if (!entry || !entry.models || !entry.port || !entry.envKey || !entry.binaryName) {
+  process.stderr.write(`Error: provider "${NAME}" is not fully configured in providers.json (need models, port, envKey, binaryName)\n`);
   process.exit(1);
 }
 const models = entry.models.map(id => ({
