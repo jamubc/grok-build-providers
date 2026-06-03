@@ -27,7 +27,9 @@
     "tui.js",
     "bins",
     "providers",
+    "scripts",
     "README.md",
-    "CONTRIBUTING.md"
+    "CONTRIBUTING.md",
+    "LICENSE"
   ]
 }

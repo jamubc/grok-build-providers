@@ -3,13 +3,15 @@
 // Shared installer logic.
 //
 // `mkdirSafe`/`writeSecure` were copy-pasted into every provider's
-// lib/install.js. `installPassthrough` is the generic installer that fully
-// replaces the per-provider install scripts for OpenAI-compatible
-// (passthrough) providers — everything it needs comes from the manifest entry.
+// lib/install.js. `installPassthrough` and `installCustom` are the generic
+// installers that fully replace the per-provider install scripts — everything
+// they need comes from the manifest entry, so adding a connector is a
+// providers.json edit, not new hardcoded install code.
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 
 const { readKey } = require('./env');
 const config = require('./config');
@@ -76,4 +78,45 @@ function installPassthrough(name, entry) {
   console.log(`verify: grok-${name} -p 'Say ok'`);
 }
 
-module.exports = { mkdirSafe, writeSecure, installPassthrough };
+// Install a custom (inline-proxy) connector purely from its manifest entry.
+// Unlike passthrough, the connector talks to a local daemon, so we mint a proxy
+// API key and point grok at http://127.0.0.1:<port>/v1; the launcher delegates
+// to the provider's own bin, which starts that daemon on demand.
+function installCustom(name, entry) {
+  const envFile = path.join(CLIPROXY_AUTH_DIR, `grok-${name}.env`);
+
+  // 1. Directories
+  mkdirSafe(CLIPROXY_AUTH_DIR, config.LOCAL_BIN, config.GROK_HOME);
+
+  // 2. Proxy API key — reuse any existing one, otherwise generate a local secret.
+  let apiKey = readKey(envFile, entry.envKey) || process.env[entry.envKey];
+  if (!apiKey) apiKey = crypto.randomBytes(24).toString('hex');
+  writeSecure(envFile, `${entry.envKey}=${apiKey}\n`);
+
+  // 3. Grok config.toml — [model.<name>] pointing at the local proxy
+  config.patchModelBlock(name, {
+    defaultModel: entry.defaultModel,
+    baseUrl: `http://127.0.0.1:${entry.port}/v1`,
+    name: entry.name,
+    envKey: entry.envKey,
+  });
+
+  // 4. Launcher that delegates to the provider's own bin (it starts the daemon)
+  const wrapperSrc = path.join(REPO_ROOT, 'providers', entry.dir || name, 'bin', `grok-${name}.js`);
+  const wrapperDst = path.join(config.LOCAL_BIN, `grok-${name}`);
+  const wrapperContent = [
+    '#!/usr/bin/env node',
+    "'use strict';",
+    `require(${JSON.stringify(wrapperSrc)});`,
+    '',
+  ].join('\n');
+  fs.writeFileSync(wrapperDst, wrapperContent, 'utf8');
+  fs.chmodSync(wrapperDst, 0o755);
+
+  // 5. Summary
+  console.log(`installed grok-${name} (Node-native inline proxy)`);
+  console.log(`model: ${entry.defaultModel}`);
+  console.log(`verify: grok-${name} -p 'Say ok'`);
+}
+
+module.exports = { mkdirSafe, writeSecure, installPassthrough, installCustom };

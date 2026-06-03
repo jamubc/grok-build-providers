@@ -3,15 +3,17 @@
 
 // Single install entry point used by both the TUI and headless mode.
 // Dispatches by provider type from the manifest:
-//   passthrough -> generic installer in providers/_shared/install.js
-//   custom      -> the provider's own providers/<dir>/lib/install.js
+//   passthrough -> installPassthrough in providers/_shared/install.js
+//   custom      -> installCustom in providers/_shared/install.js
 //   proxy       -> deferred (not yet implemented)
+//
+// Both installers are driven entirely by the manifest entry, so adding a
+// connector is a providers.json edit.
 //
 // Usage: node scripts/install-provider.js <name>
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const manifest = JSON.parse(
@@ -30,22 +32,16 @@ if (!entry) {
   process.exit(1);
 }
 
-if (entry.type === 'passthrough') {
+if (entry.type === 'passthrough' || entry.type === 'custom') {
   try {
-    require('../providers/_shared/install').installPassthrough(name, entry);
+    const installer = require('../providers/_shared/install');
+    if (entry.type === 'passthrough') installer.installPassthrough(name, entry);
+    else installer.installCustom(name, entry);
     process.exit(0);
   } catch (err) {
     process.stderr.write(`Failed to install ${name}: ${err.message}\n`);
     process.exit(1);
   }
-} else if (entry.type === 'custom') {
-  const dir = path.join(ROOT, 'providers', entry.dir || name);
-  if (!fs.existsSync(dir)) {
-    process.stderr.write(`Error: provider directory ${dir} does not exist.\n`);
-    process.exit(1);
-  }
-  const res = spawnSync('node', ['lib/install.js'], { cwd: dir, stdio: 'inherit' });
-  process.exit(res.status ?? 1);
 } else if (entry.type === 'proxy') {
   process.stderr.write(
     `provider type 'proxy' is not implemented yet (${name}); see providers/_shared/proxy.js\n`,

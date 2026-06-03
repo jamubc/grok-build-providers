@@ -9,6 +9,13 @@ Give Grok Build access to third-party models natively, without background servic
 
 These connectors spin up light, zero-dependency inline HTTP proxies on-the-fly only when Grok is running.
 
+> **Disclaimer:** `open-grok-build` is an independent, community-built tool. It is **not affiliated with, endorsed by, or sponsored by x.AI, Grok, or any model provider** (OpenAI/Codex, Google/Gemini/Antigravity, DeepSeek, or Alibaba/Qwen). All product names and trademarks belong to their respective owners and are used only to describe interoperability.
+
+## Prerequisites
+
+- The **`grok` CLI** installed and on your `PATH`. This tool *configures* Grok's connectors — it does not install Grok itself.
+- For the inline connectors, the backing CLI must be installed and signed in: **`agy`** (Antigravity/Gemini) or **`codex`** (Codex). The passthrough connectors (**DeepSeek**, **Qwen**) only need an API key.
+
 ## Connectors
 
 All connectors are distributed in a single, unified npm package `open-grok-build`.
@@ -16,7 +23,7 @@ All connectors are distributed in a single, unified npm package `open-grok-build
 | Command | Logo | Default Model | Config Snippet | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | **`grok-agy`** | <img src="assets/gemini_logo.png" height="24" valign="middle"> | `gemini-3.5-flash` | [toml](providers/agy/templates/grok-config-snippet.toml) | Gemini models via Antigravity CLI OAuth |
-| **`grok-codex`** | <img src="assets/codex_logo.png" height="24" valign="middle"> | `gpt-5.5` | [toml](providers/codex/templates/grok-config-snippet.toml) | Codex models via CLIProxyAPI OAuth |
+| **`grok-codex`** | <img src="assets/codex_logo.png" height="24" valign="middle"> | `gpt-5.5` | [toml](providers/codex/templates/grok-config-snippet.toml) | Codex models via the Codex CLI OAuth |
 | **`grok-deepseek`** | <img src="assets/deepseek_logo.png" height="24" valign="middle"> | `deepseek-v4-flash` | [manifest](providers/providers.json) | DeepSeek API direct compatible-mode integration |
 | **`grok-qwen`** | <img src="assets/qwen_logo.png" height="24" valign="middle"> | `qwen2.5-coder-32b-instruct` | [manifest](providers/providers.json) | Alibaba DashScope Qwen2.5-Coder models |
 
@@ -49,11 +56,29 @@ npx open-grok-build all        # Installs all connectors at once
 
 ---
 
+## Running a connector
+
+After installing, launch Grok on a connector with its `grok-<name>` command. It spins up the inline proxy on demand and shuts it down when you exit:
+
+```bash
+grok-agy                            # interactive Grok session on Antigravity/Gemini
+grok-codex -p "explain this repo"   # one-shot prompt via Codex
+```
+
+Or set one as the global default in the TUI and press `space` to launch.
+
+> **Custom connectors (`agy`, `codex`) must be started through their `grok-<name>` command** (or the TUI's launch), which starts the local proxy first. Running plain `grok` against them fails with `retrying…` because nothing is listening on the proxy port.
+
+Troubleshooting: set `GROK_PROXY_DEBUG=1` before a `grok-<name>` command to write a trace to `~/.cli-proxy-api/logs/inline-proxy-debug.log`.
+
+---
+
 ## Features
 * **Status Monitor**: Checks the installation status of all connectors and reports their active default models.
 * **Active Model Switcher**: Swap between connectors (`agy`, `codex`, `deepseek`, `qwen`) as the active default model in your `~/.grok/config.toml` with a single keypress.
 * **Option Adjuster**: Switch default models inside each connector (e.g. `gpt-5.5` vs `gpt-5.4` on Codex, or `gemini-3.5-flash` vs `gemini-3-pro` on AGY).
-* **Quick Installer**: Setup any or all connectors with execution logs rendered inline.
+* **Quick Installer / Uninstaller**: Set up or cleanly remove any or all connectors — launcher, credentials file, and `config.toml` block — with execution logs rendered inline.
+* **Launch**: Start a Grok session on the active connector straight from the menu (press `space`).
 
 ---
 
@@ -80,6 +105,10 @@ This registers the following commands globally:
 - `grok-codex` (runs grok with Codex proxy)
 - `grok-deepseek` (runs grok with DeepSeek)
 - `grok-qwen` (runs grok with Qwen Coder)
+
+### `npx` vs global install
+
+`npx open-grok-build` is perfect for trying it out and is all you ever need for the **passthrough** connectors (DeepSeek, Qwen) — their launchers are self-contained. For day-to-day use of the **inline** connectors (`agy`, `codex`), prefer `npm install -g open-grok-build`: their launchers point back at the package, so a global install gives them a stable home (an `npx` cache can be purged between runs).
 
 ---
 

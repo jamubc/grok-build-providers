@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+
+# npm pack / publish artifacts
+*.tgz
+
+# Grok writes a per-directory cache when run from the repo root
+cache/
+
+# OS / editor cruft
+.DS_Store
