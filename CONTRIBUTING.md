@@ -1,4 +1,4 @@
-# Contributing to open-grok-build
+# Contributing to grok-build-providers
 
 This project is a single, zero-dependency repository driven by a **provider
 registry**. Adding support for a new model is, for most cases, a matter of
@@ -10,7 +10,7 @@ per-provider npm packages.
 ## Repository Structure
 
 ```text
-open-grok-build/
+grok-build-providers/
 ├── tui.js                       # Dynamic TUI — reads providers/providers.json
 ├── package.json                 # `bin` map is generated
 ├── providers/

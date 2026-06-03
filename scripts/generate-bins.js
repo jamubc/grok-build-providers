@@ -112,7 +112,7 @@ function main() {
     }
   }
 
-  const binMap = { 'open-grok-build': './tui.js' };
+  const binMap = { 'grok-build-providers': './tui.js' };
   const written = [];
 
   for (const [name, entry] of Object.entries(manifest)) {

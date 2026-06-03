@@ -7,6 +7,7 @@ const { spawnSync, spawn } = require('child_process');
 const readline = require('readline');
 
 const config = require('./providers/_shared/config');
+const pkg = require('./package.json');
 
 // ---------------------------------------------------------------------------
 // Provider registry — everything below is driven by this manifest.
@@ -46,11 +47,11 @@ if (arg) {
     }
     process.exit(success ? 0 : 1);
   } else if (arg === '--help' || arg === '-h') {
-    console.log(`Usage: open-grok-build [${NAMES.join('|')}|all]`);
+    console.log(`Usage: grok-build-providers [${NAMES.join('|')}|all]`);
     process.exit(0);
   } else {
     console.error(`Unknown argument: ${arg}`);
-    console.log(`Usage: open-grok-build [${NAMES.join('|')}|all]`);
+    console.log(`Usage: grok-build-providers [${NAMES.join('|')}|all]`);
     process.exit(1);
   }
 }
@@ -381,7 +382,7 @@ function render() {
     const totalGB = (os.totalmem() / (1024 * 1024 * 1024)).toFixed(2);
     const memoryStr = `${freeGB} GB free / ${totalGB} GB total`;
 
-    console.log(`\n  ${C_BOLD}${C_WHITE}OPEN-GROK-BUILD(R) CONFIG SYSTEM VERSION 1.0.0${C_RESET}`);
+    console.log(`\n  ${C_BOLD}${C_WHITE}GROK-BUILD-PROVIDERS(R) CONFIG SYSTEM VERSION ${pkg.version}${C_RESET}`);
     console.log(`  ${C_GRAY}(C) Copyright 2026 jamubc. All rights reserved.${C_RESET}`);
     console.log(`  ${C_GRAY}────────────────────────────────────────────────────────${C_RESET}\n`);
     
@@ -413,7 +414,7 @@ function render() {
   const activePointer = xaiGradient('▶');
 
   // open // grok build header
-  console.log(`\n  \x1b[1;3m${C_WHITE}open${C_RESET}  ${C_GRAY}//${C_RESET}  ${C_BOLD}${xaiGradient('GROK BUILD')}`);
+  console.log(`\n  ${C_BOLD}${xaiGradient('GROK BUILD')}${C_RESET}  ${C_GRAY}//${C_RESET}  \x1b[1;3m${C_WHITE}providers${C_RESET}`);
   console.log(`  ${divider}\n`);
 
   if (message) {

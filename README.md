@@ -1,15 +1,15 @@
-# open-grok-build
+# grok-build-providers
 
 ![Status](https://img.shields.io/badge/status-active-green)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)
-![License](https://img.shields.io/github/license/jamubc/open-grok-build)
-![npm version](https://img.shields.io/npm/v/open-grok-build?color=339933&logo=npm&logoColor=white)
+![License](https://img.shields.io/github/license/jamubc/grok-build-providers)
+![npm version](https://img.shields.io/npm/v/grok-build-providers?color=339933&logo=npm&logoColor=white)
 
 Give Grok Build access to third-party models natively, without background services.
 
 These connectors spin up light, zero-dependency inline HTTP proxies on-the-fly only when Grok is running.
 
-> **Disclaimer:** `open-grok-build` is an independent, community-built tool. It is **not affiliated with, endorsed by, or sponsored by x.AI, Grok, or any model provider** (OpenAI/Codex, Google/Gemini/Antigravity, DeepSeek, or Alibaba/Qwen). All product names and trademarks belong to their respective owners and are used only to describe interoperability.
+> **Disclaimer:** `grok-build-providers` is an independent, community-built tool. It is **not affiliated with, endorsed by, or sponsored by x.AI, Grok, or any model provider** (OpenAI/Codex, Google/Gemini/Antigravity, DeepSeek, or Alibaba/Qwen). All product names and trademarks belong to their respective owners and are used only to describe interoperability.
 
 ## Prerequisites
 
@@ -18,7 +18,7 @@ These connectors spin up light, zero-dependency inline HTTP proxies on-the-fly o
 
 ## Connectors
 
-All connectors are distributed in a single, unified npm package `open-grok-build`.
+All connectors are distributed in a single, unified npm package `grok-build-providers`.
 
 | Command | Logo | Default Model | Config Snippet | Description |
 | :--- | :--- | :--- | :--- | :--- |
@@ -33,26 +33,34 @@ All connectors are distributed in a single, unified npm package `open-grok-build
 
 ## Interactive Configuration Console & TUI
 
-`open-grok-build` provides a zero-dependency interactive control panel to manage all your model connectors.
+`grok-build-providers` provides a zero-dependency interactive control panel to manage all your model connectors.
 
-### Usage
+### Install (recommended)
 
-```bash
-# Launch interactive TUI config console
-npx open-grok-build
-```
-
-### Headless/Non-Interactive Commands
-
-Install individual connectors directly from the command line:
+Install globally with npm, then launch the console:
 
 ```bash
-npx open-grok-build agy        # Installs Gemini/Antigravity connector
-npx open-grok-build codex      # Installs Codex connector
-npx open-grok-build deepseek   # Installs DeepSeek connector
-npx open-grok-build qwen       # Installs Qwen Coder connector
-npx open-grok-build all        # Installs all connectors at once
+npm install -g grok-build-providers
+grok-build-providers
 ```
+
+A global install is the recommended setup — it gives every connector, including the inline ones (`agy`, `codex`), a stable home. (See [Trying it without installing](#trying-it-without-installing) for the `npx` caveat.)
+
+### Headless / non-interactive
+
+Install connectors directly, without the menu:
+
+```bash
+grok-build-providers agy        # install the Gemini/Antigravity connector
+grok-build-providers codex      # install the Codex connector
+grok-build-providers deepseek   # install the DeepSeek connector
+grok-build-providers qwen       # install the Qwen Coder connector
+grok-build-providers all        # install everything
+```
+
+### Trying it without installing
+
+`npx grok-build-providers` is fine for a quick look, and for the **passthrough** connectors (DeepSeek, Qwen) whose launchers are self-contained. It is **not** suitable for day-to-day use of the **inline** connectors (`agy`, `codex`): their launchers point back at the package directory, so once npm purges its temporary `npx` cache they break. For anything beyond a one-off trial, install globally.
 
 ---
 
@@ -88,32 +96,23 @@ Troubleshooting: set `GROK_PROXY_DEBUG=1` before a `grok-<name>` command to writ
 Everything lives in this one repository — no submodules to initialize:
 
 ```bash
-git clone https://github.com/jamubc/open-grok-build.git
-cd open-grok-build
+git clone https://github.com/jamubc/grok-build-providers.git
+cd grok-build-providers
 ```
 
-### Global Install
-Alternatively, install everything globally via npm:
+### Installed commands
 
-```bash
-npm install -g open-grok-build
-```
-
-This registers the following commands globally:
-- `open-grok-build` (the TUI configurations manager)
-- `grok-agy` (runs grok with Antigravity proxy)
-- `grok-codex` (runs grok with Codex proxy)
-- `grok-deepseek` (runs grok with DeepSeek)
-- `grok-qwen` (runs grok with Qwen Coder)
-
-### `npx` vs global install
-
-`npx open-grok-build` is perfect for trying it out and is all you ever need for the **passthrough** connectors (DeepSeek, Qwen) — their launchers are self-contained. For day-to-day use of the **inline** connectors (`agy`, `codex`), prefer `npm install -g open-grok-build`: their launchers point back at the package, so a global install gives them a stable home (an `npx` cache can be purged between runs).
+A global install (see [Install](#install-recommended)) registers:
+- `grok-build-providers` — the TUI / configuration manager
+- `grok-agy` — run Grok via the Antigravity proxy
+- `grok-codex` — run Grok via the Codex proxy
+- `grok-deepseek` — run Grok via DeepSeek
+- `grok-qwen` — run Grok via Qwen Coder
 
 ---
 
 ## Issues & Contributions
 
 Have a bug or feature request?
-* Please open an issue on the **[GitHub Issue Tracker](https://github.com/jamubc/open-grok-build/issues)**.
-* Check the **[Releases & Downloads](https://github.com/jamubc/open-grok-build/releases)** for stable tags and archives.
+* Please open an issue on the **[GitHub Issue Tracker](https://github.com/jamubc/grok-build-providers/issues)**.
+* Check the **[Releases & Downloads](https://github.com/jamubc/grok-build-providers/releases)** for stable tags and archives.

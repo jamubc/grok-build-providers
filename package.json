@@ -1,10 +1,10 @@
 {
-  "name": "open-grok-build",
+  "name": "grok-build-providers",
   "version": "1.0.0",
   "description": "Interactive TUI and all-in-one connector installer for Grok Build (Gemini/Antigravity, Codex, DeepSeek, and Qwen)",
   "main": "tui.js",
   "bin": {
-    "open-grok-build": "./tui.js",
+    "grok-build-providers": "./tui.js",
     "grok-agy": "./bins/grok-agy.js",
     "grok-codex": "./bins/grok-codex.js",
     "grok-deepseek": "./bins/grok-deepseek.js",
@@ -21,7 +21,7 @@
   "author": "jamubc",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jamubc/open-grok-build.git"
+    "url": "git+https://github.com/jamubc/grok-build-providers.git"
   },
   "files": [
     "tui.js",
