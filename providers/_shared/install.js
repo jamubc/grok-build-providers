@@ -22,12 +22,18 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 function mkdirSafe(...dirs) {
   for (const d of dirs) {
     fs.mkdirSync(d, { recursive: true, mode: 0o700 });
+    try {
+      fs.chmodSync(d, 0o700);
+    } catch {}
   }
 }
 
 function writeSecure(filePath, content, mode = 0o600) {
   const fd = fs.openSync(filePath, 'w', mode);
   try {
+    // openSync's mode only applies when the file is created; force it so a
+    // pre-existing (possibly world-readable) secret file is tightened too.
+    fs.fchmodSync(fd, mode);
     fs.writeSync(fd, content);
   } finally {
     fs.closeSync(fd);
@@ -41,8 +47,8 @@ function installPassthrough(name, entry) {
   // 1. Directories
   mkdirSafe(CLIPROXY_AUTH_DIR, config.LOCAL_BIN, config.GROK_HOME);
 
-  // 2. API key — prefer the environment, then any value already on disk.
-  let apiKey = process.env[entry.envKey] || readKey(envFile, entry.envKey);
+  // 2. API key — prefer any value already on disk, then the environment.
+  let apiKey = readKey(envFile, entry.envKey) || process.env[entry.envKey];
   if (!apiKey) {
     apiKey = '';
     writeSecure(envFile, `${entry.envKey}=\n`);

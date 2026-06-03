@@ -104,14 +104,23 @@ function statusLabel(name) {
 }
 
 function setActiveModel(name) {
-  config.setDefaultModel(name);
+  try {
+    config.setDefaultModel(name);
+    message = `${C_GREEN}Updated default model to ${name}${C_RESET}`;
+  } catch (err) {
+    message = `${C_RED}Error writing config: ${err.message}${C_RESET}`;
+  }
 }
 
 function updateProviderModel(name, modelName) {
-  if (config.updateModelField(name, modelName)) {
-    message = `${C_GREEN}Updated ${name} default model to ${modelName}${C_RESET}`;
-  } else {
-    message = `${C_RED}Connector ${name} configuration block not found in config.toml${C_RESET}`;
+  try {
+    if (config.updateModelField(name, modelName)) {
+      message = `${C_GREEN}Updated ${name} default model to ${modelName}${C_RESET}`;
+    } else {
+      message = `${C_RED}Connector ${name} configuration block not found in config.toml${C_RESET}`;
+    }
+  } catch (err) {
+    message = `${C_RED}Error writing config: ${err.message}${C_RESET}`;
   }
 }
 

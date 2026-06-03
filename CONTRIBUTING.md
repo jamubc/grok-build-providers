@@ -68,7 +68,7 @@ changes required.
 ### Custom (special logic)
 
 1. Create `providers/<name>/` with `lib/install.js` and `bin/grok-<name>.js`
-   (use `providers/agy/` as a template — it can `require('../_shared/...')`).
+   (use `providers/agy/` as a template — it can `require('../../_shared/...')`).
 2. Add a manifest entry with `"type": "custom"` and `"dir": "<name>"`, plus the
    display fields (`name`, `label`, `description`, `defaultModel`, `models`, `logo`).
 3. Regenerate: `node scripts/generate-bins.js` (emits a thin shim in `bins/`).

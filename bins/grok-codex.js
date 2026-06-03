@@ -4,4 +4,4 @@
 // Do not edit by hand; update the manifest and re-run that script.
 
 // Custom provider: delegate to the provider's own self-contained bin.
-require('../providers/codex/bin/grok-codex.js');
+require("../providers/codex/bin/grok-codex.js");

@@ -38,19 +38,21 @@ const { spawnSync } = require('child_process');
 
 const HOME = os.homedir();
 const CLIPROXY_AUTH_DIR = process.env.CLIPROXY_AUTH_DIR || path.join(HOME, '.cli-proxy-api');
-const ENV_FILE = path.join(CLIPROXY_AUTH_DIR, 'grok-${name}.env');
+const ENV_FILE = path.join(CLIPROXY_AUTH_DIR, 'grok-' + ${JSON.stringify(name)} + '.env');
 
 // Load env
 if (fs.existsSync(ENV_FILE)) {
   const lines = fs.readFileSync(ENV_FILE, 'utf8').split(/\\r?\\n/);
   for (const line of lines) {
     const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
-    if (m) process.env[m[1]] = m[2];
+    // Skip empty values so a placeholder \`KEY=\` line written at install time
+    // does not clobber a key the user exported in their shell.
+    if (m && m[2] !== '') process.env[m[1]] = m[2];
   }
 }
 
-if (!process.env.${envKey}) {
-  process.stderr.write('missing ${envKey}. Write it to ~/.cli-proxy-api/grok-${name}.env as ${envKey}=<key>\\n');
+if (!process.env[${JSON.stringify(envKey)}]) {
+  process.stderr.write('missing ' + ${JSON.stringify(envKey)} + '. Write it to ~/.cli-proxy-api/grok-' + ${JSON.stringify(name)} + '.env as ' + ${JSON.stringify(envKey)} + '=<key>\\n');
   process.exit(1);
 }
 
@@ -59,10 +61,16 @@ const grokLocal = path.join(HOME, '.grok', 'bin', 'grok');
 const grokBin = fs.existsSync(grokLocal) ? grokLocal : 'grok';
 
 // Exec grok -m ${name} <args>
-const args = ['-m', '${name}', ...process.argv.slice(2)];
+const args = ['-m', ${JSON.stringify(name)}, ...process.argv.slice(2)];
 const result = spawnSync(grokBin, args, { stdio: 'inherit' });
 
-process.exit(result.status ?? 1);
+if (result.status !== null) {
+  process.exit(result.status);
+} else if (result.signal) {
+  process.kill(process.pid, result.signal);
+} else {
+  process.exit(1);
+}
 `;
 }
 
@@ -72,7 +80,7 @@ function customShim(name, entry) {
 'use strict';
 ${HEADER_NOTE}
 // Custom provider: delegate to the provider's own self-contained bin.
-require('../providers/${dir}/bin/grok-${name}.js');
+require(${JSON.stringify(`../providers/${dir}/bin/grok-${name}.js`)});
 `;
 }
 

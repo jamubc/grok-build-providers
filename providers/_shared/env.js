@@ -16,8 +16,14 @@ function loadEnvFile(envFilePath) {
   const lines = fs.readFileSync(envFilePath, 'utf8').split(/\r?\n/);
   for (const line of lines) {
     const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
-    if (m) process.env[m[1]] = m[2];
+    // Skip empty values so a placeholder `KEY=` line does not clobber a key
+    // already present in the environment.
+    if (m && m[2] !== '') process.env[m[1]] = m[2];
   }
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // Read a single KEY's value from an env file without touching process.env.
@@ -25,7 +31,7 @@ function loadEnvFile(envFilePath) {
 function readKey(envFilePath, key) {
   if (!fs.existsSync(envFilePath)) return undefined;
   const existing = fs.readFileSync(envFilePath, 'utf8');
-  const m = existing.match(new RegExp(`^${key}=([^\\r\\n]+)`, 'm'));
+  const m = existing.match(new RegExp(`^${escapeRegExp(key)}=([^\\r\\n]+)`, 'm'));
   return m ? m[1] : undefined;
 }
 
