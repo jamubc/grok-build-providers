@@ -62,4 +62,4 @@ fs.chmodSync(wrapperDst, 0o755);
 // ---------------------------------------------------------------------------
 console.log('installed grok-agy (Node-native inline proxy)');
 console.log('model: gemini-3.5-flash');
-console.log("verify: grok-agy -p 'Say ok'");
+console.log(`verify: grok-agy -p 'Say ok'`);

@@ -149,6 +149,32 @@ function checkStatus(name) {
   }
 }
 
+// Cleanly remove a model configuration block and reset default pointer if it matches
+function removeModelBlock(name) {
+  if (!fs.existsSync(GROK_CONFIG)) return;
+  try {
+    let toml = fs.readFileSync(GROK_CONFIG, 'utf8');
+    const escapedName = escapeRegExp(name);
+    const re = new RegExp(`\\[model\\.${escapedName}\\][^]*?(?=\\[|$)`, 'g');
+    toml = toml.replace(re, '');
+
+    const sectionMatch = toml.match(/^\[models\]([^\[]*)/m);
+    if (sectionMatch) {
+      const sectionContent = sectionMatch[1];
+      const defaultMatch = sectionContent.match(/^default\s*=\s*"([^"]+)"/m);
+      if (defaultMatch && defaultMatch[1] === name) {
+        const newSectionContent = sectionContent.replace(/^default\s*=\s*"[^"]*"/m, 'default = "None"');
+        toml = toml.replace(sectionMatch[0], `[models]${newSectionContent}`);
+      }
+    }
+
+    toml = toml.replace(/\n{3,}/g, '\n\n').trim() + '\n';
+    fs.writeFileSync(GROK_CONFIG, toml, 'utf8');
+  } catch (err) {
+    throw new Error(`Failed to remove block from config: ${err.message}`);
+  }
+}
+
 module.exports = {
   GROK_HOME,
   GROK_CONFIG,
@@ -159,4 +185,5 @@ module.exports = {
   updateModelField,
   patchModelBlock,
   checkStatus,
+  removeModelBlock,
 };
