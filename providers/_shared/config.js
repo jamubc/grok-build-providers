@@ -92,8 +92,12 @@ function patchModelBlock(name, entry) {
     let toml = fs.readFileSync(GROK_CONFIG, 'utf8');
     const sectionRe = new RegExp(`^\\[model\\.${name}\\]`, 'm');
     if (sectionRe.test(toml)) {
+      // Section-bounded ([^\[] cannot cross into the next section) and
+      // whitespace-tolerant, matching getModelField/updateModelField. The old
+      // `(?:[^\[]|\[(?!model\.))*?` form crossed non-[model.*] sections and
+      // could overwrite an unrelated section's `model` field.
       const fieldRe = new RegExp(
-        `(\\[model\\.${name}\\]\\r?\\n(?:[^\\[]|\\[(?!model\\.))*?model = ")[^"]+(")`,
+        `(\\[model\\.${name}\\][^\\[]*?model\\s*=\\s*")[^"]+(")`,
       );
       toml = toml.replace(fieldRe, `$1${entry.defaultModel}$2`);
       fs.writeFileSync(GROK_CONFIG, toml, 'utf8');

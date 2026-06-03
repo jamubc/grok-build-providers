@@ -16,7 +16,9 @@ function loadEnvFile(envFilePath) {
   const lines = fs.readFileSync(envFilePath, 'utf8').split(/\r?\n/);
   for (const line of lines) {
     const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
-    if (m) process.env[m[1]] = m[2];
+    // Skip empty values so a placeholder `KEY=` line does not clobber a key
+    // already present in the environment.
+    if (m && m[2] !== '') process.env[m[1]] = m[2];
   }
 }
 

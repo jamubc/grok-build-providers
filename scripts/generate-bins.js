@@ -45,7 +45,9 @@ if (fs.existsSync(ENV_FILE)) {
   const lines = fs.readFileSync(ENV_FILE, 'utf8').split(/\\r?\\n/);
   for (const line of lines) {
     const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
-    if (m) process.env[m[1]] = m[2];
+    // Skip empty values so a placeholder \`KEY=\` line written at install time
+    // does not clobber a key the user exported in their shell.
+    if (m && m[2] !== '') process.env[m[1]] = m[2];
   }
 }
 

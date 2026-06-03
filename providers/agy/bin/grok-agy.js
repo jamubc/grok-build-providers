@@ -233,6 +233,16 @@ const server = http.createServer((req, res) => {
       let stderr = '';
       child.stderr.on('data', chunk => { stderr += chunk.toString(); });
 
+      // If the client disconnects, kill the child so it is not orphaned, and
+      // swallow socket errors so a write-after-close does not crash the
+      // (long-lived) proxy and take down every other registered grok instance.
+      res.on('error', () => {});
+      res.on('close', () => {
+        if (!child.killed) {
+          try { child.kill('SIGTERM'); } catch {}
+        }
+      });
+
       if (isStream) {
         res.writeHead(200, {
           'Content-Type': 'text/event-stream',
@@ -242,6 +252,7 @@ const server = http.createServer((req, res) => {
         });
 
         child.stdout.on('data', chunk => {
+          if (res.writableEnded || res.destroyed) return;
           const text = chunk.toString();
           const sseObj = {
             id: `chatcmpl-${Date.now()}`,
@@ -258,7 +269,7 @@ const server = http.createServer((req, res) => {
         });
 
         child.on('close', code => {
-          if (res.writableEnded) return;
+          if (res.writableEnded || res.destroyed) return;
           if (code !== 0) {
             res.write(`data: ${JSON.stringify({ error: { message: stderr.trim() || `agy CLI exited with code ${code}` } })}\n\n`);
           } else {
@@ -290,7 +301,7 @@ const server = http.createServer((req, res) => {
         child.stdout.on('data', chunk => { fullText += chunk.toString(); });
 
         child.on('close', code => {
-          if (res.writableEnded) return;
+          if (res.writableEnded || res.destroyed) return;
           if (code !== 0) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: { message: stderr.trim() || `agy CLI exited with code ${code}` } }));

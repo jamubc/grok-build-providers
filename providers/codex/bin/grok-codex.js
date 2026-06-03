@@ -241,6 +241,16 @@ const server = http.createServer((req, res) => {
       let stderr = '';
       child.stderr.on('data', chunk => { stderr += chunk.toString(); });
 
+      // If the client disconnects, kill the child so it is not orphaned (codex
+      // runs with sandbox/approvals bypassed), and swallow socket errors so a
+      // write-after-close does not crash the long-lived shared proxy.
+      res.on('error', () => {});
+      res.on('close', () => {
+        if (!child.killed) {
+          try { child.kill('SIGTERM'); } catch {}
+        }
+      });
+
       if (isStream) {
         res.writeHead(200, {
           'Content-Type': 'text/event-stream',
@@ -251,6 +261,7 @@ const server = http.createServer((req, res) => {
 
         let buffer = '';
         child.stdout.on('data', chunk => {
+          if (res.writableEnded || res.destroyed) return;
           buffer += chunk.toString();
           const lines = buffer.split('\n');
           buffer = lines.pop(); // keep last incomplete line
@@ -285,7 +296,7 @@ const server = http.createServer((req, res) => {
         });
 
         child.on('close', code => {
-          if (res.writableEnded) return;
+          if (res.writableEnded || res.destroyed) return;
           // Flush remaining buffer
           if (buffer.trim()) {
             try {
@@ -353,7 +364,7 @@ const server = http.createServer((req, res) => {
         });
 
         child.on('close', code => {
-          if (res.writableEnded) return;
+          if (res.writableEnded || res.destroyed) return;
           if (buffer.trim()) {
             try {
               const parsed = JSON.parse(buffer);

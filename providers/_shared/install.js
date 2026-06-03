@@ -28,6 +28,9 @@ function mkdirSafe(...dirs) {
 function writeSecure(filePath, content, mode = 0o600) {
   const fd = fs.openSync(filePath, 'w', mode);
   try {
+    // openSync's mode only applies when the file is created; force it so a
+    // pre-existing (possibly world-readable) secret file is tightened too.
+    fs.fchmodSync(fd, mode);
     fs.writeSync(fd, content);
   } finally {
     fs.closeSync(fd);
