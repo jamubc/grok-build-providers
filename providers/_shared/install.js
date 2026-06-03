@@ -83,6 +83,9 @@ function installPassthrough(name, entry) {
 // API key and point grok at http://127.0.0.1:<port>/v1; the launcher delegates
 // to the provider's own bin, which starts that daemon on demand.
 function installCustom(name, entry) {
+  if (!entry) {
+    throw new Error(`Installer error: manifest entry for "${name}" is missing.`);
+  }
   const envFile = path.join(CLIPROXY_AUTH_DIR, `grok-${name}.env`);
 
   // 1. Directories
@@ -103,6 +106,9 @@ function installCustom(name, entry) {
 
   // 4. Launcher that delegates to the provider's own bin (it starts the daemon)
   const wrapperSrc = path.join(REPO_ROOT, 'providers', entry.dir || name, 'bin', `grok-${name}.js`);
+  if (!fs.existsSync(wrapperSrc)) {
+    throw new Error(`Installer error: launcher source "${wrapperSrc}" does not exist.`);
+  }
   const wrapperDst = path.join(config.LOCAL_BIN, `grok-${name}`);
   const wrapperContent = [
     '#!/usr/bin/env node',
