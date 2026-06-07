@@ -1,14 +1,15 @@
 {
   "name": "grok-build-providers",
   "version": "1.0.0",
-  "description": "Interactive TUI and all-in-one connector installer for Grok Build (Gemini/Antigravity, Codex, DeepSeek, and Qwen)",
+  "description": "Interactive TUI and all-in-one connector installer for Grok Build (Gemini/Antigravity, Codex, DeepSeek, Qwen, and OpenCode Go)",
   "main": "tui.js",
   "bin": {
-    "grok-build-providers": "tui.js",
-    "grok-agy": "bins/grok-agy.js",
-    "grok-codex": "bins/grok-codex.js",
-    "grok-deepseek": "bins/grok-deepseek.js",
-    "grok-qwen": "bins/grok-qwen.js"
+    "grok-build-providers": "./tui.js",
+    "grok-agy": "./bins/grok-agy.js",
+    "grok-codex": "./bins/grok-codex.js",
+    "grok-deepseek": "./bins/grok-deepseek.js",
+    "grok-qwen": "./bins/grok-qwen.js",
+    "grok-opencode-go": "./bins/grok-opencode-go.js"
   },
   "scripts": {
     "start": "node tui.js",

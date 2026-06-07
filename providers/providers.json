@@ -65,5 +65,33 @@
     "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
     "envKey": "DASHSCOPE_API_KEY",
     "logo": "qwen_logo.png"
+  },
+  "opencode-go": {
+    "type": "custom",
+    "dir": "opencode-go",
+    "name": "OpenCode Go",
+    "label": "OpenCode Go",
+    "description": "OpenCode Go low-cost open models subscription",
+    "defaultModel": "kimi-k2.6",
+    "models": [
+      "glm-5.1",
+      "glm-5",
+      "kimi-k2.5",
+      "kimi-k2.6",
+      "deepseek-v4-pro",
+      "deepseek-v4-flash",
+      "mimo-v2.5",
+      "mimo-v2.5-pro",
+      "minimax-m3",
+      "minimax-m2.7",
+      "minimax-m2.5",
+      "qwen3.7-max",
+      "qwen3.7-plus",
+      "qwen3.6-plus"
+    ],
+    "port": 8320,
+    "envKey": "GROK_OPENCODE_GO_PROXY_API_KEY",
+    "binaryName": "node",
+    "logo": "opencode-go_logo.svg"
   }
 }
