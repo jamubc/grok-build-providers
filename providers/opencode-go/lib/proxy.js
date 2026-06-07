@@ -69,9 +69,16 @@ const isDaemon = process.argv.includes('--daemon');
 
 loadEnvFile(ENV_FILE);
 
-const API_KEY = process.env.OPENCODE_GO_API_KEY;
-if (!API_KEY) {
+const UPSTREAM_API_KEY = process.env.OPENCODE_GO_API_KEY;
+const PROXY_API_KEY = process.env.GROK_OPENCODE_GO_PROXY_API_KEY;
+
+if (!UPSTREAM_API_KEY) {
   process.stderr.write('Error: missing OPENCODE_GO_API_KEY in environment or env file.\n');
+  process.exit(1);
+}
+
+if (!PROXY_API_KEY) {
+  process.stderr.write('Error: missing GROK_OPENCODE_GO_PROXY_API_KEY. Did you run grok provider install opencode-go?\n');
   process.exit(1);
 }
 
@@ -93,7 +100,7 @@ function sendProxyRef(action) {
       port: PORT,
       path: `/v1/proxy-ref?action=${action}&pid=${process.pid}`,
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${API_KEY}` }
+      headers: { 'Authorization': `Bearer ${PROXY_API_KEY}` }
     }, (res) => {
       res.resume();
       if (res.statusCode === 200) resolve(true);
@@ -206,7 +213,7 @@ function runDaemon() {
   const server = http.createServer((req, res) => {
     // Auth check
     const authHeader = req.headers['authorization'] || '';
-    const expected = `Bearer ${API_KEY}`;
+    const expected = `Bearer ${PROXY_API_KEY}`;
     const authHash = crypto.createHash('sha256').update(authHeader).digest();
     const expHash = crypto.createHash('sha256').update(expected).digest();
     if (!crypto.timingSafeEqual(authHash, expHash)) {
@@ -335,7 +342,7 @@ function proxyOpenAI(req, res, payload, model, isStream) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`,
+      'Authorization': `Bearer ${UPSTREAM_API_KEY}`,
       'Content-Length': Buffer.byteLength(upstreamPayload)
     }
   }, (upstreamRes) => {
@@ -384,12 +391,20 @@ function proxyAnthropic(req, res, payload, model, isStream) {
     if (!text) continue;
 
     if (role === 'system') {
-      systemPrompt = text;
-    } else if (role === 'assistant') {
-      anthropicMessages.push({ role: 'assistant', content: text });
+      if (systemPrompt) systemPrompt += '\n\n' + text;
+      else systemPrompt = text;
     } else {
-      anthropicMessages.push({ role: 'user', content: text });
+      const mappedRole = role === 'assistant' ? 'assistant' : 'user';
+      if (anthropicMessages.length > 0 && anthropicMessages[anthropicMessages.length - 1].role === mappedRole) {
+        anthropicMessages[anthropicMessages.length - 1].content += '\n\n' + text;
+      } else {
+        anthropicMessages.push({ role: mappedRole, content: text });
+      }
     }
+  }
+
+  if (anthropicMessages.length > 0 && anthropicMessages[0].role === 'assistant') {
+    anthropicMessages.unshift({ role: 'user', content: '(empty)' });
   }
 
   const anthropicPayload = {
@@ -411,12 +426,12 @@ function proxyAnthropic(req, res, payload, model, isStream) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`,
+      'Authorization': `Bearer ${UPSTREAM_API_KEY}`,
       'Content-Length': Buffer.byteLength(upstreamPayload),
       'Accept': 'application/json'
     }
   }, (upstreamRes) => {
-    if (isStream) {
+    if (isStream && upstreamRes.statusCode === 200) {
       handleAnthropicStream(res, upstreamRes, model);
     } else {
       handleAnthropicNonStream(res, upstreamRes, model);
