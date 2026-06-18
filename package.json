@@ -8,12 +8,16 @@
     "grok-agy": "./bins/grok-agy.js",
     "grok-codex": "./bins/grok-codex.js",
     "grok-deepseek": "./bins/grok-deepseek.js",
-    "grok-qwen": "./bins/grok-qwen.js",
-    "grok-openrouter": "./bins/grok-openrouter.js"
+    "grok-openrouter": "./bins/grok-openrouter.js",
+    "grok-qwen": "./bins/grok-qwen.js"
   },
   "scripts": {
     "start": "node tui.js",
-    "install-all": "node tui.js all"
+    "install-all": "node tui.js all",
+    "build:manifest": "node scripts/aggregate-manifest.js",
+    "build:bins": "node scripts/generate-bins.js",
+    "build": "npm run build:manifest && npm run build:bins",
+    "check:manifest": "node scripts/aggregate-manifest.js --check"
   },
   "engines": {
     "node": ">=18"

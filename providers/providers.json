@@ -47,16 +47,6 @@
     "envKey": "DEEPSEEK_API_KEY",
     "logo": "deepseek_logo.png"
   },
-  "qwen": {
-    "type": "passthrough",
-    "name": "Qwen Coder",
-    "label": "Qwen (Alibaba)",
-    "description": "Alibaba DashScope Qwen models",
-    "defaultModel": "qwen2.5-coder-32b-instruct",
-    "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-    "envKey": "DASHSCOPE_API_KEY",
-    "logo": "qwen_logo.png"
-  },
   "openrouter": {
     "type": "passthrough",
     "name": "OpenRouter",
@@ -66,5 +56,15 @@
     "baseUrl": "https://openrouter.ai/api/v1",
     "envKey": "OPENROUTER_API_KEY",
     "logo": "openrouter_logo.png"
+  },
+  "qwen": {
+    "type": "passthrough",
+    "name": "Qwen Coder",
+    "label": "Qwen (Alibaba)",
+    "description": "Alibaba DashScope Qwen models",
+    "defaultModel": "qwen2.5-coder-32b-instruct",
+    "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    "envKey": "DASHSCOPE_API_KEY",
+    "logo": "qwen_logo.png"
   }
 }

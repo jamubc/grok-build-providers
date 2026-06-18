@@ -1,0 +1,10 @@
+{
+  "type": "passthrough",
+  "name": "Qwen Coder",
+  "label": "Qwen (Alibaba)",
+  "description": "Alibaba DashScope Qwen models",
+  "defaultModel": "qwen2.5-coder-32b-instruct",
+  "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+  "envKey": "DASHSCOPE_API_KEY",
+  "logo": "qwen_logo.png"
+}
