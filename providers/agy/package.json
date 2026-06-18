@@ -1,5 +1,5 @@
 {
-  "name": "agy-for-grok-build",
+  "name": "@grok-build-providers/agy",
   "version": "1.0.1",
   "description": "Give Grok Build access to Antigravity CLI OAuth models",
   "license": "MIT",

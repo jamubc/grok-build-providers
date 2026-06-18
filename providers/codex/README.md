@@ -1,9 +1,9 @@
-# codex-for-grok-build
+# grok-codex (Codex provider)
 
 ![Status](https://img.shields.io/badge/status-active-green)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)
 ![Runtime](https://img.shields.io/badge/runtime-Node.js-339933?logo=node.js&logoColor=white)
-![License](https://img.shields.io/github/license/jamubc/codex-for-grok-build)
+![License](https://img.shields.io/github/license/jamubc/grok-build-providers)
 ![API](https://img.shields.io/badge/API-OpenAI%20Compatible-412991?logo=openai&logoColor=white)
 
 Give Grok Build access to Codex CLI OAuth models.
