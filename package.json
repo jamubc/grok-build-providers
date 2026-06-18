@@ -1,6 +1,6 @@
 {
   "name": "grok-build-providers",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Interactive TUI and all-in-one connector installer for Grok Build (Gemini/Antigravity, Codex, DeepSeek, Qwen, and OpenRouter)",
   "main": "tui.js",
   "bin": {
