@@ -32,6 +32,7 @@ function labelOf(name) {
 // OpenRouter alone exposes hundreds of models that change by the hour.
 const liveModels = Object.create(null);   // name -> string[] fetched this session
 const modelsStatus = Object.create(null); // name -> 'loading' | 'ok' | 'error: <msg>'
+let modelSearch = '';                      // type-to-filter query in the model picker
 
 function modelsOf(name) {
   const entry = PROVIDERS[name] || {};
@@ -40,6 +41,13 @@ function modelsOf(name) {
     return entry.defaultModel ? [entry.defaultModel] : [];
   }
   return entry.models || [];
+}
+
+// modelsOf narrowed by the current type-to-filter query (case-insensitive).
+function filteredModels(name) {
+  const all = modelsOf(name);
+  const q = modelSearch.trim().toLowerCase();
+  return q ? all.filter((m) => m.toLowerCase().includes(q)) : all;
 }
 
 // Configured default first, then everything else alphabetically.
@@ -69,7 +77,7 @@ function ensureLiveModels(name, { force = false } = {}) {
     })
     .finally(() => {
       if (currentView === 'config-models' && selectedProvider === name) {
-        const list = modelsOf(name);
+        const list = filteredModels(name);
         if (optionIndex >= list.length) optionIndex = 0;
         render();
       }
@@ -587,31 +595,45 @@ function render() {
     }
 
     const current = config.getModelField(selectedProvider);
-    const list = modelsOf(selectedProvider);
 
-    // Windowed view so a long live list (OpenRouter ships hundreds) stays
-    // navigable instead of scrolling off-screen.
-    const VIEW = 12;
+    // Type-to-filter box, essential once a live list runs to hundreds.
+    const query = modelSearch
+      ? `${C_WHITE}${modelSearch}${C_RESET}${C_WHITE}_${C_RESET}`
+      : `${C_GRAY}(type to filter)${C_RESET}`;
+    console.log(`  ${C_GRAY}search:${C_RESET} ${query}\n`);
+
+    const list = filteredModels(selectedProvider);
     const total = list.length;
-    let start = 0;
-    if (total > VIEW) {
-      start = Math.min(Math.max(0, optionIndex - Math.floor(VIEW / 2)), total - VIEW);
-    }
-    const end = Math.min(total, start + VIEW);
 
-    if (start > 0) console.log(`     ${C_GRAY}... ${start} more above${C_RESET}`);
-    for (let index = start; index < end; index++) {
-      const model = list[index];
-      const isCurrent = model === current ? `  ${C_GRAY}(current)${C_RESET}` : '';
-      if (index === optionIndex) {
-        console.log(`  ${activePointer}  ${C_BOLD}${C_WHITE}${model}${C_RESET}${isCurrent}`);
-      } else {
-        console.log(`     ${C_GRAY}${model}${C_RESET}${isCurrent}`);
+    if (total === 0) {
+      console.log(`     ${C_YELLOW}no models match "${modelSearch}"${C_RESET}`);
+    } else {
+      // Windowed view so a long list (OpenRouter ships hundreds) stays
+      // navigable instead of scrolling off-screen.
+      const VIEW = 12;
+      if (optionIndex >= total) optionIndex = total - 1;
+      if (optionIndex < 0) optionIndex = 0;
+      let start = 0;
+      if (total > VIEW) {
+        start = Math.min(Math.max(0, optionIndex - Math.floor(VIEW / 2)), total - VIEW);
       }
-    }
-    if (end < total) console.log(`     ${C_GRAY}... ${total - end} more below${C_RESET}`);
+      const end = Math.min(total, start + VIEW);
 
-    console.log(`\n  ${C_GRAY}[↑/↓] Navigate  [enter/→] Select  [esc/←] Cancel${C_RESET}`);
+      if (start > 0) console.log(`     ${C_GRAY}... ${start} more above${C_RESET}`);
+      for (let index = start; index < end; index++) {
+        const model = list[index];
+        const isCurrent = model === current ? `  ${C_GRAY}(current)${C_RESET}` : '';
+        if (index === optionIndex) {
+          console.log(`  ${activePointer}  ${C_BOLD}${C_WHITE}${model}${C_RESET}${isCurrent}`);
+        } else {
+          console.log(`     ${C_GRAY}${model}${C_RESET}${isCurrent}`);
+        }
+      }
+      if (end < total) console.log(`     ${C_GRAY}... ${total - end} more below${C_RESET}`);
+    }
+
+    const escAction = modelSearch ? 'Clear' : 'Cancel';
+    console.log(`\n  ${C_GRAY}[type] Filter  [↑/↓] Navigate  [enter] Select  [esc] ${escAction}${C_RESET}`);
   }
 
   else if (currentView === 'install') {
@@ -1233,6 +1255,13 @@ process.stdin.on('keypress', (str, key) => {
   }
 
   if (keyName === 'escape') {
+    // In the model picker, esc first clears an active filter, then exits.
+    if (currentView === 'config-models' && modelSearch) {
+      modelSearch = '';
+      optionIndex = 0;
+      render();
+      return;
+    }
     if (currentView !== 'main') {
       currentView = 'main';
       installLogs = '';
@@ -1323,22 +1352,37 @@ process.stdin.on('keypress', (str, key) => {
       selectedProvider = NAMES[configProviderIndex];
       currentView = 'config-models';
       optionIndex = 0;
+      modelSearch = '';
       ensureLiveModels(selectedProvider);
       render();
     }
   }
 
   else if (currentView === 'config-models') {
-    const models = modelsOf(selectedProvider);
+    const models = filteredModels(selectedProvider);
     if (keyName === 'up') {
-      optionIndex = (optionIndex - 1 + models.length) % models.length;
+      if (models.length) optionIndex = (optionIndex - 1 + models.length) % models.length;
       render();
     } else if (keyName === 'down') {
-      optionIndex = (optionIndex + 1) % models.length;
+      if (models.length) optionIndex = (optionIndex + 1) % models.length;
       render();
     } else if (keyName === 'return') {
-      updateProviderModel(selectedProvider, models[optionIndex]);
-      currentView = 'main';
+      if (models.length) {
+        updateProviderModel(selectedProvider, models[optionIndex]);
+        currentView = 'main';
+        modelSearch = '';
+      }
+      render();
+    } else if (keyName === 'backspace') {
+      if (modelSearch) {
+        modelSearch = modelSearch.slice(0, -1);
+        optionIndex = 0;
+      }
+      render();
+    } else if (str && str.length === 1 && str >= ' ' && !key.ctrl && !key.meta) {
+      // Printable character: extend the type-to-filter query.
+      modelSearch += str;
+      optionIndex = 0;
       render();
     }
   }
