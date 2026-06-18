@@ -12,12 +12,12 @@ Give Grok Build access to third-party models natively, without background servic
 
 These connectors spin up light, zero-dependency inline HTTP proxies on-the-fly only when Grok is running.
 
-> **Disclaimer:** `grok-build-providers` is an independent, community-built tool. It is **not affiliated with, endorsed by, or sponsored by x.AI, Grok, or any model provider** (OpenAI/Codex, Google/Gemini/Antigravity, DeepSeek, or Alibaba/Qwen). All product names and trademarks belong to their respective owners and are used only to describe interoperability.
+> **Disclaimer:** `grok-build-providers` is an independent, community-built tool. It is **not affiliated with, endorsed by, or sponsored by x.AI, Grok, or any model provider** (OpenAI/Codex, Google/Gemini/Antigravity, DeepSeek, Alibaba/Qwen, or OpenRouter). All product names and trademarks belong to their respective owners and are used only to describe interoperability.
 
 ## Prerequisites
 
 - **[Grok Build](https://x.ai/cli)** installed and on your `PATH`. This tool configures Grok's connectors; it does not install Grok Build itself.
-- For the inline connectors, the backing CLI must be installed and signed in: **`agy`** (Antigravity/Gemini) or **`codex`** (Codex). The passthrough connectors (**DeepSeek**, **Qwen**) only need an API key.
+- For the inline connectors, the backing CLI must be installed and signed in: **`agy`** (Antigravity/Gemini) or **`codex`** (Codex). The passthrough connectors (**DeepSeek**, **Qwen**, **OpenRouter**) only need an API key.
 
 ## Connectors
 
@@ -28,9 +28,12 @@ All connectors are distributed in a single, unified npm package `grok-build-prov
 | **`grok-agy`** | ![Gemini](https://img.shields.io/badge/Gemini-8E75B2?logo=googlegemini&logoColor=white&style=flat-square) | `gemini-3.5-flash` | [toml](providers/agy/templates/grok-config-snippet.toml) | Gemini models via Antigravity CLI OAuth |
 | **`grok-codex`** | ![OpenAI](https://img.shields.io/badge/OpenAI-412991?logo=openai&logoColor=white&style=flat-square) | `gpt-5.5` | [toml](providers/codex/templates/grok-config-snippet.toml) | Codex models via the Codex CLI OAuth |
 | **`grok-deepseek`** | ![DeepSeek](https://img.shields.io/badge/DeepSeek-4D6BFE?logo=deepseek&logoColor=white&style=flat-square) | `deepseek-v4-flash` | [manifest](providers/providers.json) | DeepSeek API direct compatible-mode integration |
-| **`grok-qwen`** | ![Qwen](https://img.shields.io/badge/Qwen-FF6A00?logo=qwen&logoColor=white&style=flat-square) | `qwen2.5-coder-32b-instruct` | [manifest](providers/providers.json) | Alibaba DashScope Qwen2.5-Coder models |
+| **`grok-qwen`** | ![Qwen](https://img.shields.io/badge/Qwen-FF6A00?logo=qwen&logoColor=white&style=flat-square) | `qwen2.5-coder-32b-instruct` | [manifest](providers/providers.json) | Alibaba DashScope Qwen models |
+| **`grok-openrouter`** | ![OpenRouter](https://img.shields.io/badge/OpenRouter-6566F1?logo=openrouter&logoColor=white&style=flat-square) | `openrouter/auto` | [manifest](providers/providers.json) | Hundreds of models across providers; list fetched live |
 
 > The full connector list is the single source of truth in [`providers/providers.json`](providers/providers.json). See [CONTRIBUTING.md](CONTRIBUTING.md) to add one.
+>
+> Passthrough connectors (DeepSeek, Qwen, OpenRouter) pull their selectable model list live from the provider's `/models` endpoint each run, so nothing is pinned in the repo.
 
 ---
 
@@ -58,6 +61,7 @@ grok-build-providers agy        # install the Gemini/Antigravity connector
 grok-build-providers codex      # install the Codex connector
 grok-build-providers deepseek   # install the DeepSeek connector
 grok-build-providers qwen       # install the Qwen Coder connector
+grok-build-providers openrouter # install the OpenRouter connector
 grok-build-providers all        # install everything
 ```
 
@@ -69,7 +73,7 @@ npx grok-build-providers
 
 Use `npx` for a quick try without a global install. What works and what does not:
 
-- **DeepSeek, Qwen (passthrough):** fully supported via `npx`. Their launchers are self-contained and only need an API key.
+- **DeepSeek, Qwen, OpenRouter (passthrough):** fully supported via `npx`. Their launchers are self-contained and only need an API key.
 - **Gemini/AGY, Codex (inline):** unreliable via `npx`. Their launchers reference the package directory, so they break once npm clears its temporary `npx` cache. Use a global install for these.
 
 ---
@@ -93,8 +97,8 @@ Troubleshooting: set `GROK_PROXY_DEBUG=1` before a `grok-<name>` command to writ
 
 ## Features
 * **Status Monitor**: Checks the installation status of all connectors and reports their active default models.
-* **Active Model Switcher**: Swap between connectors (`agy`, `codex`, `deepseek`, `qwen`) as the active default model in your `~/.grok/config.toml` with a single keypress.
-* **Option Adjuster**: Switch default models inside each connector (e.g. `gpt-5.5` vs `gpt-5.4` on Codex, or `gemini-3.5-flash` vs `gemini-3-pro` on AGY).
+* **Active Model Switcher**: Swap between connectors (`agy`, `codex`, `deepseek`, `qwen`, `openrouter`) as the active default model in your `~/.grok/config.toml` with a single keypress.
+* **Option Adjuster**: Switch default models inside each connector (e.g. `gpt-5.5` vs `gpt-5.4` on Codex, or `gemini-3.5-flash` vs `gemini-3-pro` on AGY). Passthrough connectors load their full model list live from the provider's `/models` endpoint.
 * **Quick Installer / Uninstaller**: Set up or cleanly remove any or all connectors (launcher, credentials file, and `config.toml` block) with execution logs rendered inline.
 * **Launch**: Start a Grok session on the active connector straight from the menu (press `space`).
 
@@ -127,6 +131,7 @@ A global install (see [Install](#install-recommended)) registers:
 | `grok-codex` | Grok Build with Codex proxy |
 | `grok-deepseek` | Grok Build with DeepSeek |
 | `grok-qwen` | Grok Build with Qwen Coder |
+| `grok-openrouter` | Grok Build with OpenRouter (live model list) |
 
 ---
 

@@ -17,6 +17,7 @@ grok-build-providers/
 │   ├── providers.json           # Master manifest (source of truth)
 │   ├── _shared/                 # Shared, zero-dependency library
 │   │   ├── env.js               # .env loading
+│   │   ├── models.js            # live {baseUrl}/models fetch (passthrough)
 │   │   ├── config.js            # ~/.grok/config.toml read/patch helpers
 │   │   ├── install.js           # mkdirSafe/writeSecure + installPassthrough()
 │   │   └── proxy.js             # generic inline proxy (deferred stub)
@@ -35,7 +36,7 @@ grok-build-providers/
 
 | Type | When to use | Code needed |
 | :--- | :--- | :--- |
-| `passthrough` | Upstream exposes an OpenAI-compatible endpoint (DeepSeek, Qwen, Groq…) | **None** — the manifest entry is sufficient. The generated wrapper runs `grok -m <name>`. |
+| `passthrough` | Upstream exposes an OpenAI-compatible endpoint (DeepSeek, Qwen, OpenRouter, Groq…) | **None** — the manifest entry is sufficient. The generated wrapper runs `grok -m <name>`, and the TUI fetches the model list live from `{baseUrl}/models`. |
 | `custom` | Unique auth / protocol / CLI wrapping (AGY, Codex) | A `providers/<name>/` directory with its own `bin/` and `lib/install.js`. May import from `_shared/`. |
 | `proxy` | Needs a generic inline HTTP proxy (format translation) | Reserved — `_shared/proxy.js` is a deferred stub; not yet implemented. |
 
@@ -53,7 +54,6 @@ grok-build-providers/
      "label": "Groq (LPU)",
      "description": "Groq LPU Inference Engine",
      "defaultModel": "llama3-70b-8192",
-     "models": ["llama3-70b-8192", "llama3-8b-8192"],
      "baseUrl": "https://api.groq.com/openai/v1",
      "envKey": "GROQ_API_KEY",
      "logo": "groq_logo.png"
@@ -63,7 +63,9 @@ grok-build-providers/
 3. Commit `providers/providers.json`, the new `bins/grok-groq.js`, and `package.json`.
 
 The TUI, headless installer, and `bin` map all pick it up automatically — no code
-changes required.
+changes required. Passthrough connectors do **not** list models in the manifest:
+the TUI pulls the current catalogue live from `{baseUrl}/models` on each run, so
+only `defaultModel` (the value written to `config.toml`) is needed.
 
 ### Custom (special logic)
 
@@ -85,7 +87,7 @@ changes required.
 | `label` | all | Short label shown in TUI menus |
 | `description` | all | One-line description |
 | `defaultModel` | all | Default model written to `config.toml` |
-| `models` | all | Selectable models in the TUI |
+| `models` | custom | Models the inline proxy advertises to Grok. Passthrough lists are fetched live from `{baseUrl}/models`, so this field is not used for them. |
 | `logo` | all | Filename under `assets/` |
 | `baseUrl` | passthrough | Upstream OpenAI-compatible base URL |
 | `envKey` | passthrough | Environment variable holding the API key |

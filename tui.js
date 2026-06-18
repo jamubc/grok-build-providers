@@ -7,6 +7,8 @@ const { spawnSync, spawn } = require('child_process');
 const readline = require('readline');
 
 const config = require('./providers/_shared/config');
+const { readKey } = require('./providers/_shared/env');
+const { fetchModels } = require('./providers/_shared/models');
 const pkg = require('./package.json');
 
 // ---------------------------------------------------------------------------
@@ -21,8 +23,57 @@ const INSTALL_PROVIDER = path.join(__dirname, 'scripts', 'install-provider.js');
 function labelOf(name) {
   return PROVIDERS[name].label || PROVIDERS[name].name || name;
 }
+
+// --- Model lists ----------------------------------------------------------
+// Custom (inline-proxy) connectors carry their catalogue in the manifest; the
+// local proxy serves it verbatim to Grok. Passthrough connectors point at a
+// real OpenAI-compatible API, so their lists are fetched live from
+// {baseUrl}/models at runtime (see _shared/models.js) and never pinned here —
+// OpenRouter alone exposes hundreds of models that change by the hour.
+const liveModels = Object.create(null);   // name -> string[] fetched this session
+const modelsStatus = Object.create(null); // name -> 'loading' | 'ok' | 'error: <msg>'
+
 function modelsOf(name) {
-  return PROVIDERS[name].models || [];
+  const entry = PROVIDERS[name] || {};
+  if (entry.type === 'passthrough') {
+    if (liveModels[name] && liveModels[name].length) return liveModels[name];
+    return entry.defaultModel ? [entry.defaultModel] : [];
+  }
+  return entry.models || [];
+}
+
+// Configured default first, then everything else alphabetically.
+function orderModels(preferred, ids) {
+  const rest = ids.filter((id) => id !== preferred).sort((a, b) => a.localeCompare(b));
+  return preferred && ids.includes(preferred) ? [preferred, ...rest] : rest;
+}
+
+// Kick off a one-shot live fetch for a passthrough connector. Fire-and-forget:
+// re-renders when done if the user is still on that connector's model view.
+function ensureLiveModels(name, { force = false } = {}) {
+  const entry = PROVIDERS[name] || {};
+  if (entry.type !== 'passthrough') return;
+  if (!force && (liveModels[name] || modelsStatus[name] === 'loading')) return;
+
+  modelsStatus[name] = 'loading';
+  const envFile = path.join(require('os').homedir(), '.cli-proxy-api', `grok-${name}.env`);
+  const apiKey = readKey(envFile, entry.envKey) || process.env[entry.envKey];
+
+  fetchModels(entry, { apiKey })
+    .then((ids) => {
+      liveModels[name] = orderModels(entry.defaultModel, ids);
+      modelsStatus[name] = 'ok';
+    })
+    .catch((err) => {
+      modelsStatus[name] = 'error: ' + (err && err.message ? err.message : String(err));
+    })
+    .finally(() => {
+      if (currentView === 'config-models' && selectedProvider === name) {
+        const list = modelsOf(name);
+        if (optionIndex >= list.length) optionIndex = 0;
+        render();
+      }
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -520,15 +571,46 @@ function render() {
 
   else if (currentView === 'config-models') {
     console.log(`  ${C_BOLD}${C_WHITE}SELECT DEFAULT MODEL FOR ${labelOf(selectedProvider).toUpperCase()}${C_RESET}\n`);
+
+    // For passthrough connectors the list is fetched live; show its state.
+    const pEntry = PROVIDERS[selectedProvider] || {};
+    if (pEntry.type === 'passthrough') {
+      const st = modelsStatus[selectedProvider];
+      const src = `${pEntry.baseUrl}/models`;
+      if (st === 'loading') {
+        console.log(`  ${C_GRAY}fetching live model list from ${src} ...${C_RESET}\n`);
+      } else if (st === 'ok') {
+        console.log(`  ${C_GRAY}${liveModels[selectedProvider].length} models, live from ${src}${C_RESET}\n`);
+      } else if (st && st.startsWith('error')) {
+        console.log(`  ${C_YELLOW}live model list unavailable (${st.slice(7)}); showing default${C_RESET}\n`);
+      }
+    }
+
     const current = config.getModelField(selectedProvider);
-    modelsOf(selectedProvider).forEach((model, index) => {
+    const list = modelsOf(selectedProvider);
+
+    // Windowed view so a long live list (OpenRouter ships hundreds) stays
+    // navigable instead of scrolling off-screen.
+    const VIEW = 12;
+    const total = list.length;
+    let start = 0;
+    if (total > VIEW) {
+      start = Math.min(Math.max(0, optionIndex - Math.floor(VIEW / 2)), total - VIEW);
+    }
+    const end = Math.min(total, start + VIEW);
+
+    if (start > 0) console.log(`     ${C_GRAY}... ${start} more above${C_RESET}`);
+    for (let index = start; index < end; index++) {
+      const model = list[index];
       const isCurrent = model === current ? `  ${C_GRAY}(current)${C_RESET}` : '';
       if (index === optionIndex) {
         console.log(`  ${activePointer}  ${C_BOLD}${C_WHITE}${model}${C_RESET}${isCurrent}`);
       } else {
         console.log(`     ${C_GRAY}${model}${C_RESET}${isCurrent}`);
       }
-    });
+    }
+    if (end < total) console.log(`     ${C_GRAY}... ${total - end} more below${C_RESET}`);
+
     console.log(`\n  ${C_GRAY}[↑/↓] Navigate  [enter/→] Select  [esc/←] Cancel${C_RESET}`);
   }
 
@@ -1241,6 +1323,7 @@ process.stdin.on('keypress', (str, key) => {
       selectedProvider = NAMES[configProviderIndex];
       currentView = 'config-models';
       optionIndex = 0;
+      ensureLiveModels(selectedProvider);
       render();
     }
   }
