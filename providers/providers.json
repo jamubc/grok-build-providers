@@ -43,10 +43,6 @@
     "label": "DeepSeek",
     "description": "DeepSeek API direct compatible-mode integration",
     "defaultModel": "deepseek-v4-flash",
-    "models": [
-      "deepseek-v4-flash",
-      "deepseek-v4-pro"
-    ],
     "baseUrl": "https://api.deepseek.com",
     "envKey": "DEEPSEEK_API_KEY",
     "logo": "deepseek_logo.png"
@@ -55,15 +51,20 @@
     "type": "passthrough",
     "name": "Qwen Coder",
     "label": "Qwen (Alibaba)",
-    "description": "Alibaba DashScope Qwen2.5-Coder models",
+    "description": "Alibaba DashScope Qwen models",
     "defaultModel": "qwen2.5-coder-32b-instruct",
-    "models": [
-      "qwen2.5-coder-32b-instruct",
-      "qwen2.5-coder-7b-instruct",
-      "qwen2.5-coder-1.5b-instruct"
-    ],
     "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
     "envKey": "DASHSCOPE_API_KEY",
     "logo": "qwen_logo.png"
+  },
+  "openrouter": {
+    "type": "passthrough",
+    "name": "OpenRouter",
+    "label": "OpenRouter",
+    "description": "Unified gateway to hundreds of models across providers via the OpenRouter API",
+    "defaultModel": "openrouter/auto",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "envKey": "OPENROUTER_API_KEY",
+    "logo": "openrouter_logo.png"
   }
 }
