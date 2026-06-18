@@ -1,0 +1,10 @@
+{
+  "type": "passthrough",
+  "name": "DeepSeek",
+  "label": "DeepSeek",
+  "description": "DeepSeek API direct compatible-mode integration",
+  "defaultModel": "deepseek-v4-flash",
+  "baseUrl": "https://api.deepseek.com",
+  "envKey": "DEEPSEEK_API_KEY",
+  "logo": "deepseek_logo.png"
+}

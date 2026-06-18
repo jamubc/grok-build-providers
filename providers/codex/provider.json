@@ -1,0 +1,19 @@
+{
+  "type": "custom",
+  "dir": "codex",
+  "name": "Codex (inline)",
+  "label": "Codex",
+  "description": "Codex models via the Codex CLI OAuth",
+  "defaultModel": "gpt-5.5",
+  "models": [
+    "gpt-5.5",
+    "gpt-5.4",
+    "gpt-5.4-mini",
+    "gpt-5.3-codex",
+    "gpt-5.2"
+  ],
+  "port": 8319,
+  "envKey": "GROK_CODEX_PROXY_API_KEY",
+  "binaryName": "codex",
+  "logo": "codex_logo.png"
+}

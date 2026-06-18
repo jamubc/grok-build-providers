@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Per-provider manifest fragments: each provider is now defined by its own `providers/<id>/provider.json` (the directory name is the id). `scripts/aggregate-manifest.js` scans the fragments and regenerates `providers/providers.json`. Adding a provider is a new file in a new directory, with no edits to a shared file.
+- Build scripts: `npm run build` (aggregate the manifest, then regenerate bins), plus `build:manifest`, `build:bins`, and `check:manifest` (asserts `providers/providers.json` is in sync with the fragments).
+
+### Changed
+
+- `providers/providers.json` is now a generated aggregate of the fragments, not a hand-edited file. Edit the fragment and run `npm run build`.
+- Provider order in the manifest, the TUI menus, and the `package.json` bin map is now alphabetical by id.
+
 ## [1.1.0] - 2026-06-18
 
 ### Added
