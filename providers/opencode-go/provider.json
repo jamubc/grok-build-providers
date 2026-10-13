@@ -1,0 +1,16 @@
+{
+  "type": "passthrough",
+  "name": "OpenCode Go",
+  "label": "OpenCode Go",
+  "description": "OpenCode Go subscription: open coding models at a flat monthly price",
+  "defaultModel": "kimi-k2.7-code",
+  "baseUrl": "https://opencode.ai/inference/go/v1",
+  "envKey": "OPENCODE_API_KEY",
+  "extraHeaders": {
+    "x-opencode-session": "grok-build-providers-$UUID"
+  },
+  "backendRules": [
+    { "match": "^(gpt-|grok-|muse-spark-)", "backend": "responses" },
+    { "match": "^(claude-|minimax-|qwen)", "backend": "messages" }
+  ]
+}

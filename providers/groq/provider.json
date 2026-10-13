@@ -1,0 +1,9 @@
+{
+  "type": "passthrough",
+  "name": "Groq",
+  "label": "Groq (LPU)",
+  "description": "Open-weight models on Groq LPU inference",
+  "defaultModel": "openai/gpt-oss-120b",
+  "baseUrl": "https://api.groq.com/openai/v1",
+  "envKey": "GROQ_API_KEY"
+}

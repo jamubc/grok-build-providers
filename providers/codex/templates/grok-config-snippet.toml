@@ -1,5 +1,5 @@
 [model.codex]
-model = "gpt-5.5"
+model = "gpt-6-luna"
 base_url = "http://127.0.0.1:8319/v1"
 name = "Codex (inline)"
 env_key = "GROK_CODEX_PROXY_API_KEY"

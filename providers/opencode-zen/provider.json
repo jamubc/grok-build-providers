@@ -1,0 +1,14 @@
+{
+  "type": "passthrough",
+  "name": "OpenCode Zen",
+  "label": "OpenCode Zen",
+  "description": "OpenCode pay-as-you-go console: Claude, GPT, Grok, and open models behind one key",
+  "defaultModel": "glm-5.3",
+  "baseUrl": "https://opencode.ai/zen/v1",
+  "envKey": "OPENCODE_API_KEY",
+  "excludeModels": "^(gemini-|jev-)",
+  "backendRules": [
+    { "match": "^(gpt-|grok-|muse-spark-)", "backend": "responses" },
+    { "match": "^(claude-|qwen3\\.[567]-|qwen3\\.8-flash)", "backend": "messages" }
+  ]
+}

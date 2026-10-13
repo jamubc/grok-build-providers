@@ -361,7 +361,7 @@ function setActiveModel(name) {
 
 function updateProviderModel(name, modelName) {
   try {
-    if (config.updateModelField(name, modelName)) {
+    if (config.updateModelField(name, modelName, PROVIDERS[name])) {
       setMessage(`${C_GREEN}Updated ${name} default model to ${modelName}${C_RESET}`);
     } else {
       setMessage(`${C_RED}Connector ${name} configuration block not found in config.toml${C_RESET}`);
@@ -623,10 +623,14 @@ function render() {
       for (let index = start; index < end; index++) {
         const model = list[index];
         const isCurrent = model === current ? `  ${C_GRAY}(current)${C_RESET}` : '';
+        // Gateways front several wire protocols; flag the ones that are not
+        // plain chat completions so the switch is visible before it happens.
+        const backend = config.backendFor(pEntry, model);
+        const viaBackend = backend !== config.DEFAULT_BACKEND ? `  ${C_GRAY}via ${backend}${C_RESET}` : '';
         if (index === optionIndex) {
-          console.log(`  ${activePointer}  ${C_BOLD}${C_WHITE}${model}${C_RESET}${isCurrent}`);
+          console.log(`  ${activePointer}  ${C_BOLD}${C_WHITE}${model}${C_RESET}${viaBackend}${isCurrent}`);
         } else {
-          console.log(`     ${C_GRAY}${model}${C_RESET}${isCurrent}`);
+          console.log(`     ${C_GRAY}${model}${C_RESET}${viaBackend}${isCurrent}`);
         }
       }
       if (end < total) console.log(`     ${C_GRAY}... ${total - end} more below${C_RESET}`);

@@ -1,0 +1,10 @@
+{
+  "type": "passthrough",
+  "name": "Kimi (Moonshot)",
+  "label": "Kimi (Moonshot AI)",
+  "description": "Kimi K3 and K2.7 models via the Moonshot AI open platform",
+  "defaultModel": "kimi-k2.7-code",
+  "baseUrl": "https://api.moonshot.ai/v1",
+  "envKey": "MOONSHOT_API_KEY",
+  "contextWindow": 262144
+}

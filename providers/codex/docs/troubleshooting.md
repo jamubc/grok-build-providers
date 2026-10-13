@@ -13,7 +13,7 @@ grep -A7 '^\[model.codex\]' ~/.grok/config.toml
 Expected:
 
 ```toml
-model = "gpt-5.5"
+model = "gpt-6-luna"
 base_url = "http://127.0.0.1:8319/v1"
 ```
 
@@ -30,7 +30,7 @@ curl -s \
   -H "Authorization: Bearer $KEY" \
   -H "Content-Type: application/json" \
   http://127.0.0.1:8319/v1/chat/completions \
-  -d '{"model":"gpt-5.5","messages":[{"role":"user","content":"Say ok"}],"stream":false}' | python3 -m json.tool
+  -d '{"model":"gpt-6-luna","messages":[{"role":"user","content":"Say ok"}],"stream":false}' | python3 -m json.tool
 ```
 
 ## Permissions/Sandbox

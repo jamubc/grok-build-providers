@@ -52,9 +52,7 @@ function aggregate() {
       throw new Error(`Failed to parse ${fragmentPath}: ${err.message}`);
     }
 
-    if (entry.envKey && !/^[A-Z_][A-Z0-9_]*$/.test(entry.envKey)) {
-      throw new Error(`Invalid envKey "${entry.envKey}" for provider "${id}": must be a valid environment variable identifier.`);
-    }
+    validateEntry(id, entry);
 
     byId[id] = entry;
     ids.push(id);
@@ -66,6 +64,62 @@ function aggregate() {
   const ordered = {};
   for (const id of ids) ordered[id] = byId[id];
   return ordered;
+}
+
+const TYPES = new Set(['passthrough', 'custom', 'proxy']);
+const BACKENDS = new Set(['chat_completions', 'responses', 'messages']);
+const AUTH_SCHEMES = new Set(['bearer', 'x-api-key']);
+
+function compiles(pattern) {
+  try { new RegExp(pattern); return true; } catch { return false; }
+}
+
+// Fail the build on a malformed fragment rather than letting the TUI or an
+// installer trip over it at runtime on a user's machine.
+function validateEntry(id, entry) {
+  const fail = (msg) => { throw new Error(`providers/${id}/provider.json: ${msg}`); };
+
+  if (!TYPES.has(entry.type)) fail(`type must be one of ${[...TYPES].join(', ')}`);
+  for (const f of ['name', 'defaultModel']) {
+    if (typeof entry[f] !== 'string' || !entry[f]) fail(`"${f}" is required`);
+  }
+  if (entry.envKey && !/^[A-Z_][A-Z0-9_]*$/.test(entry.envKey)) {
+    fail(`invalid envKey "${entry.envKey}": must be a valid environment variable identifier`);
+  }
+  if (entry.type === 'passthrough') {
+    if (!/^https:\/\//.test(entry.baseUrl || '')) fail('passthrough needs an https baseUrl');
+    if (!entry.envKey) fail('passthrough needs an envKey');
+  }
+  if (entry.type === 'custom') {
+    if (!Number.isInteger(entry.port)) fail('custom needs an integer port');
+    if (!entry.envKey) fail('custom needs an envKey');
+    if (!Array.isArray(entry.models) || !entry.models.length) fail('custom needs a non-empty models list');
+  }
+  if (entry.apiBackend !== undefined && !BACKENDS.has(entry.apiBackend)) {
+    fail(`apiBackend must be one of ${[...BACKENDS].join(', ')}`);
+  }
+  if (entry.authScheme !== undefined && !AUTH_SCHEMES.has(entry.authScheme)) {
+    fail(`authScheme must be one of ${[...AUTH_SCHEMES].join(', ')}`);
+  }
+  if (entry.backendRules !== undefined) {
+    if (!Array.isArray(entry.backendRules)) fail('backendRules must be an array');
+    entry.backendRules.forEach((rule, i) => {
+      if (!rule || typeof rule.match !== 'string' || !compiles(rule.match)) fail(`backendRules[${i}].match must be a valid regex`);
+      if (!BACKENDS.has(rule.backend)) fail(`backendRules[${i}].backend must be one of ${[...BACKENDS].join(', ')}`);
+    });
+  }
+  if (entry.excludeModels !== undefined && (typeof entry.excludeModels !== 'string' || !compiles(entry.excludeModels))) {
+    fail('excludeModels must be a valid regex string');
+  }
+  if (entry.extraHeaders !== undefined) {
+    if (!entry.extraHeaders || typeof entry.extraHeaders !== 'object' || Array.isArray(entry.extraHeaders)) fail('extraHeaders must be an object');
+    for (const [k, v] of Object.entries(entry.extraHeaders)) {
+      if (!/^[A-Za-z0-9-]+$/.test(k) || typeof v !== 'string') fail(`extraHeaders["${k}"] must map a header name to a string`);
+    }
+  }
+  if (entry.contextWindow !== undefined && !(Number.isInteger(entry.contextWindow) && entry.contextWindow > 0)) {
+    fail('contextWindow must be a positive integer');
+  }
 }
 
 function serialize(obj) {
@@ -98,4 +152,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { aggregate, writeManifest, MANIFEST_PATH };
+module.exports = { aggregate, writeManifest, validateEntry, MANIFEST_PATH };

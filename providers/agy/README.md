@@ -19,7 +19,7 @@ grok-agy -p "Say ok"
 Default model:
 
 ```toml
-model = "gemini-3.5-flash"
+model = "gemini-3.8-flash-high"
 ```
 
 ## What It Does
@@ -62,15 +62,16 @@ grep -A7 '^\[model.agy\]' ~/.grok/config.toml
 
 ## Models
 
-Exposed Antigravity models:
+The proxy asks `agy models` for the live roster when it starts and serves that to Grok; the manifest list below is the offline fallback:
 
-- `gemini-3.5-flash`
-- `gemini-3-pro`
-- `gemini-3-pro-thinking`
-- `gemini-2.5-pro`
-- `gemini-2.5-flash`
+- `gemini-3.8-flash-high`
+- `gemini-3.8-flash-medium`
+- `gemini-3.8-flash-low`
+- `claude-sonnet-4-6`
+- `claude-opus-4-6-thinking`
+- `gpt-oss-120b-medium`
 
-`agy` is pinned to `gemini-3.5-flash` by default.
+`agy` is pinned to `gemini-3.8-flash-high` by default. The selected model is passed to `agy --model`, so switching models in the TUI changes what Antigravity runs.
 
 ## Security
 
