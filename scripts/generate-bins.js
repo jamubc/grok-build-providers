@@ -112,7 +112,9 @@ function main() {
     }
   }
 
-  const binMap = { 'grok-build-providers': './tui.js' };
+  // npm normalises bin paths to have no leading './' (`npm pkg fix`); emit
+  // them that way so `npm publish` does not warn about cleaning them.
+  const binMap = { 'grok-build-providers': 'tui.js' };
   const written = [];
 
   for (const [name, entry] of Object.entries(manifest)) {
@@ -132,7 +134,7 @@ function main() {
     const dest = path.join(BINS_DIR, `grok-${name}.js`);
     fs.writeFileSync(dest, content, 'utf8');
     fs.chmodSync(dest, 0o755);
-    binMap[`grok-${name}`] = `./bins/grok-${name}.js`;
+    binMap[`grok-${name}`] = `bins/grok-${name}.js`;
     written.push(`grok-${name}`);
   }
 
