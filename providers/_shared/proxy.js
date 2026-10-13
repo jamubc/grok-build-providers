@@ -58,6 +58,7 @@ function startProxy(options) {
     binaryName,
     format, // 'plain' or 'json-lines'
     spawnArgs, // (model, prompt) => Array
+    discoverModels, // optional async (backendBin) => string[] of live model ids
   } = options;
 
   const isDaemon = process.argv.includes('--daemon');
@@ -77,7 +78,7 @@ function startProxy(options) {
   const backendBin = findBinary(binaryName);
 
   if (isDaemon) {
-    runDaemon({ port, expectedKey, backendBin, binaryName, models, format, spawnArgs });
+    runDaemon({ port, expectedKey, backendBin, binaryName, models, format, spawnArgs, discoverModels });
   } else {
     runClient(port, expectedKey, grokBin, name);
   }
@@ -238,8 +239,28 @@ function makeParser(format) {
 
 // --- Daemon logic ----------------------------------------------------------
 
-function runDaemon({ port, expectedKey, backendBin, binaryName, models, format, spawnArgs }) {
+function runDaemon({ port, expectedKey, backendBin, binaryName, models, format, spawnArgs, discoverModels }) {
   const activePIDs = new Set();
+
+  // Refresh the advertised catalogue from the backend CLI itself. The manifest
+  // list is the offline fallback; model rosters on the OAuth CLIs turn over
+  // every few weeks, so pinning them in the repo goes stale fast. The array is
+  // mutated in place so every closure holding `models` sees the update.
+  if (typeof discoverModels === 'function') {
+    const DISCOVER_TIMEOUT_MS = 15000;
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timed out')), DISCOVER_TIMEOUT_MS).unref());
+    Promise.race([discoverModels(backendBin), timeout])
+      .then((ids) => {
+        const clean = Array.isArray(ids) ? ids.filter((id) => typeof id === 'string' && id) : [];
+        if (!clean.length) return;
+        const owner = (models[0] && models[0].owned_by) || binaryName;
+        const fresh = clean.map((id) => ({ id, object: 'model', created: 1677610602, owned_by: owner }));
+        models.splice(0, models.length, ...fresh);
+        dlog('daemon', `live model list from ${binaryName}: ${clean.join(', ')}`);
+      })
+      .catch((err) => dlog('daemon', `model discovery failed (${err.message}); serving manifest list`));
+  }
   const IDLE_MS = 10000;        // shut down this long after the last client exits
   const STARTUP_GRACE_MS = 30000; // …or if no client ever registers
   let idleTimer = null;

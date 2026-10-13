@@ -4,19 +4,19 @@
     "dir": "agy",
     "name": "Antigravity (inline)",
     "label": "AGY (Antigravity)",
-    "description": "Gemini models via Antigravity CLI OAuth",
-    "defaultModel": "gemini-3.5-flash",
+    "description": "Gemini, Claude, and GPT-OSS models via Antigravity CLI OAuth",
+    "defaultModel": "gemini-3.8-flash-high",
     "models": [
-      "gemini-3.5-flash",
-      "gemini-3-pro",
-      "gemini-3-pro-thinking",
-      "gemini-2.5-pro",
-      "gemini-2.5-flash"
+      "gemini-3.8-flash-high",
+      "gemini-3.8-flash-medium",
+      "gemini-3.8-flash-low",
+      "claude-sonnet-4-6",
+      "claude-opus-4-6-thinking",
+      "gpt-oss-120b-medium"
     ],
     "port": 8318,
     "envKey": "GROK_AGY_PROXY_API_KEY",
-    "binaryName": "agy",
-    "logo": "gemini_logo.png"
+    "binaryName": "agy"
   },
   "codex": {
     "type": "custom",
@@ -24,28 +24,86 @@
     "name": "Codex (inline)",
     "label": "Codex",
     "description": "Codex models via the Codex CLI OAuth",
-    "defaultModel": "gpt-5.5",
+    "defaultModel": "gpt-6-luna",
     "models": [
-      "gpt-5.5",
-      "gpt-5.4",
-      "gpt-5.4-mini",
-      "gpt-5.3-codex",
-      "gpt-5.2"
+      "gpt-6-luna",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-5.5"
     ],
     "port": 8319,
     "envKey": "GROK_CODEX_PROXY_API_KEY",
-    "binaryName": "codex",
-    "logo": "codex_logo.png"
+    "binaryName": "codex"
   },
   "deepseek": {
     "type": "passthrough",
     "name": "DeepSeek",
     "label": "DeepSeek",
-    "description": "DeepSeek API direct compatible-mode integration",
+    "description": "DeepSeek V4 models via the first-party OpenAI-compatible API",
     "defaultModel": "deepseek-v4-flash",
     "baseUrl": "https://api.deepseek.com",
-    "envKey": "DEEPSEEK_API_KEY",
-    "logo": "deepseek_logo.png"
+    "envKey": "DEEPSEEK_API_KEY"
+  },
+  "groq": {
+    "type": "passthrough",
+    "name": "Groq",
+    "label": "Groq (LPU)",
+    "description": "Open-weight models on Groq LPU inference",
+    "defaultModel": "openai/gpt-oss-120b",
+    "baseUrl": "https://api.groq.com/openai/v1",
+    "envKey": "GROQ_API_KEY"
+  },
+  "kimi": {
+    "type": "passthrough",
+    "name": "Kimi (Moonshot)",
+    "label": "Kimi (Moonshot AI)",
+    "description": "Kimi K3 and K2.7 models via the Moonshot AI open platform",
+    "defaultModel": "kimi-k2.7-code",
+    "baseUrl": "https://api.moonshot.ai/v1",
+    "envKey": "MOONSHOT_API_KEY",
+    "contextWindow": 262144
+  },
+  "opencode-go": {
+    "type": "passthrough",
+    "name": "OpenCode Go",
+    "label": "OpenCode Go",
+    "description": "OpenCode Go subscription: open coding models at a flat monthly price",
+    "defaultModel": "kimi-k2.7-code",
+    "baseUrl": "https://opencode.ai/inference/go/v1",
+    "envKey": "OPENCODE_API_KEY",
+    "extraHeaders": {
+      "x-opencode-session": "grok-build-providers-$UUID"
+    },
+    "backendRules": [
+      {
+        "match": "^(gpt-|grok-|muse-spark-)",
+        "backend": "responses"
+      },
+      {
+        "match": "^(claude-|minimax-|qwen)",
+        "backend": "messages"
+      }
+    ]
+  },
+  "opencode-zen": {
+    "type": "passthrough",
+    "name": "OpenCode Zen",
+    "label": "OpenCode Zen",
+    "description": "OpenCode pay-as-you-go console: Claude, GPT, Grok, and open models behind one key",
+    "defaultModel": "glm-5.3",
+    "baseUrl": "https://opencode.ai/zen/v1",
+    "envKey": "OPENCODE_API_KEY",
+    "excludeModels": "^(gemini-|jev-)",
+    "backendRules": [
+      {
+        "match": "^(gpt-|grok-|muse-spark-)",
+        "backend": "responses"
+      },
+      {
+        "match": "^(claude-|qwen3\\.[567]-|qwen3\\.8-flash)",
+        "backend": "messages"
+      }
+    ]
   },
   "openrouter": {
     "type": "passthrough",
@@ -54,17 +112,24 @@
     "description": "Unified gateway to hundreds of models across providers via the OpenRouter API",
     "defaultModel": "openrouter/auto",
     "baseUrl": "https://openrouter.ai/api/v1",
-    "envKey": "OPENROUTER_API_KEY",
-    "logo": "openrouter_logo.png"
+    "envKey": "OPENROUTER_API_KEY"
   },
   "qwen": {
     "type": "passthrough",
     "name": "Qwen Coder",
     "label": "Qwen (Alibaba)",
-    "description": "Alibaba DashScope Qwen models",
-    "defaultModel": "qwen2.5-coder-32b-instruct",
+    "description": "Alibaba Model Studio (DashScope international) Qwen models",
+    "defaultModel": "qwen3-coder-plus",
     "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-    "envKey": "DASHSCOPE_API_KEY",
-    "logo": "qwen_logo.png"
+    "envKey": "DASHSCOPE_API_KEY"
+  },
+  "zai": {
+    "type": "passthrough",
+    "name": "Z.ai (GLM)",
+    "label": "Z.ai (GLM)",
+    "description": "GLM-5.x models via the Z.ai open platform",
+    "defaultModel": "glm-5.3",
+    "baseUrl": "https://api.z.ai/api/paas/v4",
+    "envKey": "ZAI_API_KEY"
   }
 }

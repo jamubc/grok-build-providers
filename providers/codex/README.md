@@ -19,7 +19,7 @@ grok-codex -p "Say ok"
 Default model:
 
 ```toml
-model = "gpt-5.5"
+model = "gpt-6-luna"
 ```
 
 ## What It Does
@@ -62,15 +62,14 @@ grep -A7 '^\[model.codex\]' ~/.grok/config.toml
 
 ## Models
 
-Exposed Codex models:
+The proxy reads the Codex CLI's own roster cache (`~/.codex/models_cache.json`) when it starts, drops entries Codex hides from its picker, and serves the rest to Grok; the manifest list below is the offline fallback:
 
-- `gpt-5.5`
-- `gpt-5.4`
-- `gpt-5.4-mini`
-- `gpt-5.3-codex`
-- `gpt-5.2`
+- `gpt-6-luna`
+- `gpt-5.6-terra`
+- `gpt-5.6-luna`
+- `gpt-5.5` (legacy)
 
-`codex` is pinned to `gpt-5.5` by default.
+`codex` is pinned to `gpt-6-luna` by default.
 
 ## Security
 

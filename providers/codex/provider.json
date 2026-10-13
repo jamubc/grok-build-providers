@@ -4,16 +4,14 @@
   "name": "Codex (inline)",
   "label": "Codex",
   "description": "Codex models via the Codex CLI OAuth",
-  "defaultModel": "gpt-5.5",
+  "defaultModel": "gpt-6-luna",
   "models": [
-    "gpt-5.5",
-    "gpt-5.4",
-    "gpt-5.4-mini",
-    "gpt-5.3-codex",
-    "gpt-5.2"
+    "gpt-6-luna",
+    "gpt-5.6-terra",
+    "gpt-5.6-luna",
+    "gpt-5.5"
   ],
   "port": 8319,
   "envKey": "GROK_CODEX_PROXY_API_KEY",
-  "binaryName": "codex",
-  "logo": "codex_logo.png"
+  "binaryName": "codex"
 }
