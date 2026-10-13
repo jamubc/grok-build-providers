@@ -4,7 +4,7 @@
 //
 // `mkdirSafe`/`writeSecure` were copy-pasted into every provider's
 // lib/install.js. `installPassthrough` and `installCustom` are the generic
-// installers that fully replace the per-provider install scripts — everything
+// installers that fully replace the per-provider install scripts. Everything
 // they need comes from the manifest entry, so adding a connector is a
 // providers.json edit, not new hardcoded install code.
 
@@ -42,15 +42,60 @@ function writeSecure(filePath, content, mode = 0o600) {
   }
 }
 
+// Find an API key for `envKey`: this connector's env file first, then the
+// shell environment, then any sibling grok-*.env that holds the same variable
+// (OpenCode Go and OpenCode Zen share OPENCODE_API_KEY, so a key entered for
+// one should light up the other).
+function findKey(envKey, ownEnvFile) {
+  const own = readKey(ownEnvFile, envKey);
+  if (own) return own;
+  if (process.env[envKey]) return process.env[envKey];
+  try {
+    for (const file of fs.readdirSync(CLIPROXY_AUTH_DIR)) {
+      if (!/^grok-.*\.env$/.test(file)) continue;
+      const full = path.join(CLIPROXY_AUTH_DIR, file);
+      if (full === ownEnvFile) continue;
+      const v = readKey(full, envKey);
+      if (v) return v;
+    }
+  } catch {}
+  return undefined;
+}
+
+// Resolve manifest `extraHeaders` into concrete values. The only placeholder
+// is `$UUID`: a per-install random id that is kept stable across reinstalls by
+// reading the value already in config.toml. OpenCode uses it as a session id
+// for routing and prompt caching.
+function resolveExtraHeaders(name, headers) {
+  if (!headers || typeof headers !== 'object') return undefined;
+  const out = {};
+  for (const [header, raw] of Object.entries(headers)) {
+    let value = String(raw);
+    if (value.includes('$UUID')) {
+      const existing = config.getExtraHeader(name, header);
+      value = existing || value.replace('$UUID', crypto.randomUUID());
+    }
+    out[header] = value;
+  }
+  return out;
+}
+
 // Install a passthrough connector purely from its manifest entry.
 function installPassthrough(name, entry) {
+  if (!entry) {
+    throw new Error(`Installer error: manifest entry for "${name}" is missing.`);
+  }
+  if (!entry.envKey || !entry.baseUrl || !entry.defaultModel) {
+    throw new Error(`Installer error: manifest entry for "${name}" is missing required fields (envKey, baseUrl, defaultModel).`);
+  }
   const envFile = path.join(CLIPROXY_AUTH_DIR, `grok-${name}.env`);
 
   // 1. Directories
   mkdirSafe(CLIPROXY_AUTH_DIR, config.LOCAL_BIN, config.GROK_HOME);
 
-  // 2. API key — prefer any value already on disk, then the environment.
-  let apiKey = readKey(envFile, entry.envKey) || process.env[entry.envKey];
+  // 2. API key: prefer any value already on disk, then the environment, then a
+  //    sibling connector that uses the same variable.
+  let apiKey = findKey(entry.envKey, envFile);
   if (!apiKey) {
     apiKey = '';
     writeSecure(envFile, `${entry.envKey}=\n`);
@@ -58,8 +103,11 @@ function installPassthrough(name, entry) {
     writeSecure(envFile, `${entry.envKey}=${apiKey}\n`);
   }
 
-  // 3. Grok config.toml — [model.<name>]
-  config.patchModelBlock(name, entry);
+  // 3. Grok config.toml: [model.<name>]
+  config.patchModelBlock(name, {
+    ...entry,
+    extraHeaders: resolveExtraHeaders(name, entry.extraHeaders),
+  });
 
   // 4. Copy the generated wrapper into ~/.local/bin
   const wrapperSrc = path.join(REPO_ROOT, 'bins', `grok-${name}.js`);
@@ -69,7 +117,7 @@ function installPassthrough(name, entry) {
 
   // 5. Summary
   console.log(`installed grok-${name}`);
-  console.log(`model: ${entry.defaultModel}`);
+  console.log(`model: ${entry.defaultModel} (${config.backendFor(entry, entry.defaultModel)})`);
   if (!apiKey) {
     console.log(
       `WARNING: missing ${entry.envKey}. Write it to ~/.cli-proxy-api/grok-${name}.env`,
@@ -94,17 +142,18 @@ function installCustom(name, entry) {
   // 1. Directories
   mkdirSafe(CLIPROXY_AUTH_DIR, config.LOCAL_BIN, config.GROK_HOME);
 
-  // 2. Proxy API key — reuse any existing one, otherwise generate a local secret.
+  // 2. Proxy API key: reuse any existing one, otherwise generate a local secret.
   let apiKey = readKey(envFile, entry.envKey) || process.env[entry.envKey];
   if (!apiKey) apiKey = crypto.randomBytes(24).toString('hex');
   writeSecure(envFile, `${entry.envKey}=${apiKey}\n`);
 
-  // 3. Grok config.toml — [model.<name>] pointing at the local proxy
+  // 3. Grok config.toml: [model.<name>] pointing at the local proxy
   config.patchModelBlock(name, {
     defaultModel: entry.defaultModel,
     baseUrl: `http://127.0.0.1:${entry.port}/v1`,
     name: entry.name,
     envKey: entry.envKey,
+    contextWindow: entry.contextWindow,
   });
 
   // 4. Launcher that delegates to the provider's own bin (it starts the daemon)
@@ -128,4 +177,4 @@ function installCustom(name, entry) {
   console.log(`verify: grok-${name} -p 'Say ok'`);
 }
 
-module.exports = { mkdirSafe, writeSecure, installPassthrough, installCustom };
+module.exports = { mkdirSafe, writeSecure, findKey, resolveExtraHeaders, installPassthrough, installCustom };

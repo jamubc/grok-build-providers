@@ -1,0 +1,9 @@
+{
+  "type": "passthrough",
+  "name": "Z.ai (GLM)",
+  "label": "Z.ai (GLM)",
+  "description": "GLM-5.x models via the Z.ai open platform",
+  "defaultModel": "glm-5.3",
+  "baseUrl": "https://api.z.ai/api/paas/v4",
+  "envKey": "ZAI_API_KEY"
+}

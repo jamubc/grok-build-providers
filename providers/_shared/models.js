@@ -11,8 +11,9 @@
 // timeout. Callers degrade to the manifest `defaultModel` on any failure.
 //
 // Custom (inline-proxy) connectors do NOT use this: their `/v1/models` is
-// synthesised locally from the manifest by _shared/proxy.js, because an OAuth
-// CLI bridge has no upstream catalogue endpoint to query.
+// served by _shared/proxy.js from the manifest list, refreshed at daemon start
+// from the backend CLI's own catalogue when the connector provides a
+// `discoverModels` hook (`agy models`, Codex's models cache).
 
 const https = require('https');
 
@@ -68,11 +69,21 @@ function fetchModels(entry, { apiKey, timeoutMs = 4000 } = {}) {
             ids.push(id);
           }
         }
-        if (!ids.length) {
+        // Hide models the connector cannot drive. Gateways list every model
+        // they front, including protocols Grok Build has no backend for
+        // (OpenCode's Gemini models use a Google-only endpoint).
+        let visible = ids;
+        if (entry.excludeModels) {
+          try {
+            const ex = new RegExp(entry.excludeModels);
+            visible = ids.filter((id) => !ex.test(id));
+          } catch {}
+        }
+        if (!visible.length) {
           reject(new Error('models endpoint returned no models'));
           return;
         }
-        resolve(ids);
+        resolve(visible);
       });
     });
 

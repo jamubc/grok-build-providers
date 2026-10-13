@@ -2,9 +2,8 @@
   "type": "passthrough",
   "name": "DeepSeek",
   "label": "DeepSeek",
-  "description": "DeepSeek API direct compatible-mode integration",
+  "description": "DeepSeek V4 models via the first-party OpenAI-compatible API",
   "defaultModel": "deepseek-v4-flash",
   "baseUrl": "https://api.deepseek.com",
-  "envKey": "DEEPSEEK_API_KEY",
-  "logo": "deepseek_logo.png"
+  "envKey": "DEEPSEEK_API_KEY"
 }

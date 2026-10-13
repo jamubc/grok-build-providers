@@ -15,10 +15,21 @@ const GROK_HOME = process.env.GROK_HOME || path.join(HOME, '.grok');
 const GROK_CONFIG = process.env.GROK_CONFIG || path.join(GROK_HOME, 'config.toml');
 const LOCAL_BIN = process.env.LOCAL_BIN || path.join(HOME, '.local', 'bin');
 
-// --- Default model (the [models] default = "..." line) --------------------
+// Wire protocols Grok Build can speak to a [model.<name>] endpoint, and the
+// header it uses to carry the key. Both are documented in Grok Build's
+// custom-models guide (api_backend / auth_scheme).
+const BACKENDS = ['chat_completions', 'responses', 'messages'];
+const AUTH_SCHEMES = ['bearer', 'x-api-key'];
+const DEFAULT_BACKEND = 'chat_completions';
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Regex for one whole `[model.<name>]` section: from its header up to (not
+// including) the next line that opens a table, or end of file.
+function sectionRegex(name) {
+  return new RegExp(`^\\[model\\.${escapeRegExp(name)}\\][^]*?(?=^\\[|(?![^]))`, 'm');
 }
 
 // --- Default model (the [models] default = "..." line) --------------------
@@ -62,6 +73,51 @@ function setDefaultModel(model) {
   fs.writeFileSync(GROK_CONFIG, toml, 'utf8');
 }
 
+// --- Per-model wire protocol ----------------------------------------------
+
+// Which api_backend a given model needs on this connector. Gateways such as
+// OpenCode front models that speak different protocols behind one base URL
+// (Claude via Anthropic messages, GPT via Responses, everything else via chat
+// completions); `backendRules` in the manifest maps model ids to the protocol,
+// first match wins, else `apiBackend`, else chat_completions.
+function backendFor(entry, model) {
+  if (entry && Array.isArray(entry.backendRules)) {
+    for (const rule of entry.backendRules) {
+      if (!rule || !rule.match || !rule.backend) continue;
+      let re;
+      try { re = new RegExp(rule.match); } catch { continue; }
+      if (re.test(String(model))) return rule.backend;
+    }
+  }
+  return (entry && entry.apiBackend) || DEFAULT_BACKEND;
+}
+
+// Serialise a flat string map as a TOML inline table.
+function tomlInlineTable(obj) {
+  const pairs = Object.entries(obj).map(([k, v]) => `${JSON.stringify(k)} = ${JSON.stringify(String(v))}`);
+  return `{ ${pairs.join(', ')} }`;
+}
+
+// Render a complete [model.<name>] block for a connector. `entry` carries the
+// manifest fields (name, baseUrl, envKey, apiBackend, authScheme, backendRules,
+// contextWindow, extraHeaders); `model` is the model id to pin.
+function renderModelBlock(name, entry, model) {
+  const lines = [
+    `[model.${name}]`,
+    `model = "${model}"`,
+    `base_url = "${entry.baseUrl}"`,
+    `name = "${entry.name}"`,
+    `env_key = "${entry.envKey}"`,
+    `api_backend = "${backendFor(entry, model)}"`,
+    `auth_scheme = "${entry.authScheme || 'bearer'}"`,
+  ];
+  if (entry.contextWindow) lines.push(`context_window = ${Number(entry.contextWindow)}`);
+  if (entry.extraHeaders && Object.keys(entry.extraHeaders).length) {
+    lines.push(`extra_headers = ${tomlInlineTable(entry.extraHeaders)}`);
+  }
+  return lines.join('\n') + '\n';
+}
+
 // --- Per-connector [model.<name>] sections --------------------------------
 
 // Read the `model` field inside a [model.<name>] section.
@@ -77,55 +133,85 @@ function getModelField(name) {
   }
 }
 
-// Update the `model` field inside an existing [model.<name>] section.
-// Returns true on success, false if the section was not found.
-function updateModelField(name, modelName) {
+// Read one key out of a connector's `extra_headers` inline table, or
+// undefined. Used to keep per-install values (OpenCode's session id) stable
+// across reinstalls.
+function getExtraHeader(name, header) {
+  if (!fs.existsSync(GROK_CONFIG)) return undefined;
+  try {
+    const toml = fs.readFileSync(GROK_CONFIG, 'utf8');
+    const section = toml.match(sectionRegex(name));
+    if (!section) return undefined;
+    const table = section[0].match(/^extra_headers\s*=\s*\{([^}]*)\}/m);
+    if (!table) return undefined;
+    const re = new RegExp(`"${escapeRegExp(header)}"\\s*=\\s*"([^"]*)"`);
+    const m = table[1].match(re);
+    return m ? m[1] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// Update the `model` field inside an existing [model.<name>] section. When the
+// connector has backend rules, the `api_backend` line follows the model so a
+// switch from a chat-completions model to a Claude or GPT model on the same
+// gateway keeps working. Returns true on success, false if the section was not
+// found.
+function updateModelField(name, modelName, entry) {
   if (!fs.existsSync(GROK_CONFIG)) return false;
   let toml = fs.readFileSync(GROK_CONFIG, 'utf8');
-  const re = new RegExp(`(\\[model\\.${escapeRegExp(name)}\\][^\\[]*?model\\s*=\\s*")[^"]+(")`);
-  if (!re.test(toml)) return false;
-  toml = toml.replace(re, `$1${modelName}$2`);
+  const secRe = sectionRegex(name);
+  const sec = toml.match(secRe);
+  if (!sec) return false;
+
+  let section = sec[0];
+  const modelRe = /^(model\s*=\s*")[^"]*(")/m;
+  if (modelRe.test(section)) {
+    section = section.replace(modelRe, `$1${modelName}$2`);
+  } else {
+    section = section.replace(/^\[model\.[^\]]+\]\s*\n?/, (h) => `${h.trimEnd()}\nmodel = "${modelName}"\n`);
+  }
+
+  if (entry && Array.isArray(entry.backendRules) && entry.backendRules.length) {
+    const backend = backendFor(entry, modelName);
+    const backendRe = /^(api_backend\s*=\s*")[^"]*(")/m;
+    if (backendRe.test(section)) {
+      section = section.replace(backendRe, `$1${backend}$2`);
+    } else {
+      section = section.replace(modelRe, (m) => `${m}\napi_backend = "${backend}"`);
+    }
+  }
+
+  toml = toml.replace(sec[0], section);
   fs.writeFileSync(GROK_CONFIG, toml, 'utf8');
   return true;
 }
 
-// Upsert a passthrough connector's [model.<name>] block. Mirrors the historical
-// deepseek/qwen installer behaviour exactly: if the section exists, only the
-// model field is reset to the default; otherwise the full block is appended.
+// Upsert a connector's [model.<name>] block from its manifest entry. The block
+// is regenerated in full (model pinned back to `entry.defaultModel`) so an
+// "install / update" pass picks up schema changes such as a new api_backend or
+// extra_headers; everything outside the section is left untouched.
 function patchModelBlock(name, entry) {
-  const modelBlock = [
-    '',
-    `[model.${name}]`,
-    `model = "${entry.defaultModel}"`,
-    `base_url = "${entry.baseUrl}"`,
-    `name = "${entry.name}"`,
-    `env_key = "${entry.envKey}"`,
-    'api_backend = "chat_completions"',
-    'auth_scheme = "bearer"',
-    '',
-  ].join('\n');
+  const block = renderModelBlock(name, entry, entry.defaultModel);
 
-  if (fs.existsSync(GROK_CONFIG)) {
-    let toml = fs.readFileSync(GROK_CONFIG, 'utf8');
-    const escapedName = escapeRegExp(name);
-    const sectionRe = new RegExp(`^\\[model\\.${escapedName}\\]`, 'm');
-    if (sectionRe.test(toml)) {
-      const fieldRe = new RegExp(
-        `(\\[model\\.${escapedName}\\][^\\[]*?model\\s*=\\s*")[^"]+(")`,
-      );
-      if (fieldRe.test(toml)) {
-        toml = toml.replace(fieldRe, `$1${entry.defaultModel}$2`);
-      } else {
-        // Section exists but model field is missing. Insert model line right after section header.
-        toml = toml.replace(sectionRe, `[model.${name}]\nmodel = "${entry.defaultModel}"`);
-      }
-      fs.writeFileSync(GROK_CONFIG, toml, 'utf8');
-    } else {
-      fs.appendFileSync(GROK_CONFIG, modelBlock, 'utf8');
-    }
-  } else {
-    fs.writeFileSync(GROK_CONFIG, modelBlock.trimStart(), 'utf8');
+  if (!fs.existsSync(GROK_CONFIG)) {
+    fs.mkdirSync(path.dirname(GROK_CONFIG), { recursive: true });
+    fs.writeFileSync(GROK_CONFIG, block, 'utf8');
+    return;
   }
+
+  let toml = fs.readFileSync(GROK_CONFIG, 'utf8');
+  const sec = toml.match(sectionRegex(name));
+  if (sec) {
+    // Keep the blank-line spacing that followed the old section.
+    const trailing = sec[0].match(/\n*$/)[0];
+    const keep = trailing.length > 1 ? trailing : '\n';
+    toml = toml.replace(sec[0], block.trimEnd() + keep);
+  } else {
+    if (!toml.endsWith('\n')) toml += '\n';
+    toml += '\n' + block;
+  }
+  fs.writeFileSync(GROK_CONFIG, toml, 'utf8');
 }
 
 // Installation status for a connector: green/Installed when both the wrapper
@@ -154,9 +240,7 @@ function removeModelBlock(name) {
   if (!fs.existsSync(GROK_CONFIG)) return;
   try {
     let toml = fs.readFileSync(GROK_CONFIG, 'utf8');
-    const escapedName = escapeRegExp(name);
-    const re = new RegExp(`\\[model\\.${escapedName}\\][^]*?(?=\\[|$)`, 'g');
-    toml = toml.replace(re, '');
+    toml = toml.replace(sectionRegex(name), '');
 
     const sectionMatch = toml.match(/^\[models\]([^\[]*)/m);
     if (sectionMatch) {
@@ -179,11 +263,17 @@ module.exports = {
   GROK_HOME,
   GROK_CONFIG,
   LOCAL_BIN,
+  BACKENDS,
+  AUTH_SCHEMES,
+  DEFAULT_BACKEND,
   getDefaultModel,
   setDefaultModel,
   getModelField,
+  getExtraHeader,
   updateModelField,
   patchModelBlock,
+  renderModelBlock,
+  backendFor,
   checkStatus,
   removeModelBlock,
 };
